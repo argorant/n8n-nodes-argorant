@@ -1,0 +1,52 @@
+{
+  "name": "n8n-nodes-argorant",
+  "version": "0.1.0",
+  "description": "n8n community node for Argorant — search, count, reveal, and export verified B2B contacts (614M records, 184 countries, verified at export time).",
+  "keywords": [
+    "n8n-community-node-package",
+    "argorant",
+    "b2b",
+    "leads",
+    "contacts",
+    "sales"
+  ],
+  "license": "MIT",
+  "homepage": "https://argorant.com/docs/integrations/n8n",
+  "author": {
+    "name": "Argorant",
+    "email": "support@argorant.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/argorant/n8n-nodes-argorant.git"
+  },
+  "engines": {
+    "node": ">=18.10"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && mkdir -p dist/nodes/Argorant dist/nodes/ArgorantTrigger && cp nodes/Argorant/argorant.svg dist/nodes/Argorant/ && cp nodes/Argorant/argorant.svg dist/nodes/ArgorantTrigger/",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/ArgorantApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Argorant/Argorant.node.js",
+      "dist/nodes/ArgorantTrigger/ArgorantTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "n8n-workflow": "^1.48.0",
+    "typescript": "^5.4.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

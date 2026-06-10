@@ -1,0 +1,121 @@
+import type {
+	IDataObject,
+	IHookFunctions,
+	INodeType,
+	INodeTypeDescription,
+	IWebhookFunctions,
+	IWebhookResponseData,
+} from 'n8n-workflow';
+
+const API_BASE = 'https://argorant.com/api';
+
+export class ArgorantTrigger implements INodeType {
+	description: INodeTypeDescription = {
+		displayName: 'Argorant Trigger',
+		name: 'argorantTrigger',
+		icon: 'file:argorant.svg',
+		group: ['trigger'],
+		version: 1,
+		subtitle: '={{$parameter["events"].join(", ")}}',
+		description:
+			'Fires on Argorant account events: export ready, verification completed, new segment matches',
+		defaults: { name: 'Argorant Trigger' },
+		inputs: [],
+		outputs: ['main'],
+		credentials: [{ name: 'argorantApi', required: true }],
+		webhooks: [
+			{
+				name: 'default',
+				httpMethod: 'POST',
+				responseMode: 'onReceived',
+				path: 'webhook',
+			},
+		],
+		properties: [
+			{
+				displayName: 'Events',
+				name: 'events',
+				type: 'multiOptions',
+				required: true,
+				default: ['export.ready'],
+				options: [
+					{
+						name: 'Export Ready',
+						value: 'export.ready',
+						description: 'A verified export finished building and is downloadable',
+					},
+					{
+						name: 'Verification Completed',
+						value: 'verification.completed',
+						description: 'A single-email verification finished',
+					},
+					{
+						name: 'Segment New Matches',
+						value: 'segment.new_matches',
+						description: 'A saved filtered list gained new matching records',
+					},
+				],
+			},
+		],
+	};
+
+	webhookMethods = {
+		default: {
+			async checkExists(this: IHookFunctions): Promise<boolean> {
+				const webhookData = this.getWorkflowStaticData('node');
+				if (!webhookData.webhookId) return false;
+				try {
+					const response = (await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'argorantApi',
+						{ method: 'GET', url: `${API_BASE}/mcp/webhooks`, json: true },
+					)) as IDataObject;
+					const hooks = (response.webhooks as IDataObject[]) || [];
+					return hooks.some((h) => String(h.id) === String(webhookData.webhookId));
+				} catch {
+					return false;
+				}
+			},
+			async create(this: IHookFunctions): Promise<boolean> {
+				const webhookUrl = this.getNodeWebhookUrl('default');
+				const events = this.getNodeParameter('events') as string[];
+				const response = (await this.helpers.httpRequestWithAuthentication.call(
+					this,
+					'argorantApi',
+					{
+						method: 'POST',
+						url: `${API_BASE}/mcp/webhooks`,
+						body: { url: webhookUrl, events },
+						json: true,
+					},
+				)) as IDataObject;
+				const webhookData = this.getWorkflowStaticData('node');
+				webhookData.webhookId = response.id;
+				return true;
+			},
+			async delete(this: IHookFunctions): Promise<boolean> {
+				const webhookData = this.getWorkflowStaticData('node');
+				if (webhookData.webhookId) {
+					try {
+						await this.helpers.httpRequestWithAuthentication.call(this, 'argorantApi', {
+							method: 'DELETE',
+							url: `${API_BASE}/mcp/webhooks/${webhookData.webhookId}`,
+							json: true,
+						});
+					} catch {
+						// Subscription already removed server-side; clear local state regardless.
+					}
+					delete webhookData.webhookId;
+				}
+				return true;
+			},
+		},
+	};
+
+	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
+		const body = this.getBodyData();
+		return {
+			workflowData: [this.helpers.returnJsonArray(body as IDataObject)],
+		};
+	}
+}
