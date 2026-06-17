@@ -23,7 +23,7 @@ Create an API key at [app.argorant.com/profile](https://app.argorant.com/profile
 | Export | Get Status | Free | Poll until `status = completed` |
 | Export | Download | Free | CSV of the finished job |
 
-Filters: free-text query, title, seniority, department, industry, country/state/city, company name/domain, verify status, has-phone, has-LinkedIn.
+Filters: free-text query, title, seniority, department, industry, country/state/city, company name/domain, has-phone, has-LinkedIn. (Deliverability isn't a browse filter — every revealed/exported contact is verified live at that moment.)
 
 ## AI agents
 

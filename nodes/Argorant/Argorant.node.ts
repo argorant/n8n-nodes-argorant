@@ -61,13 +61,6 @@ const FILTER_FIELDS: INodeProperties[] = [
 		description: 'Company website domain, e.g. acme.com',
 	},
 	{
-		displayName: 'Verify Status',
-		name: 'verify_status',
-		type: 'string',
-		default: '',
-		description: 'Filter on verification status',
-	},
-	{
 		displayName: 'Has Phone',
 		name: 'has_phone',
 		type: 'boolean',
