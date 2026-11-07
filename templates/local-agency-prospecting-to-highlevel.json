@@ -1,0 +1,218 @@
+{
+  "name": "Local agency prospecting: a weekly batch of business owners into HighLevel",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Local agency prospecting: a weekly batch of business owners into HighLevel\n\n### How it works\nKeep your pipeline full without buying lists. Every Monday Argorant looks for owners, founders and partners at companies whose description matches your niche keywords (for example dentist, med spa, roofing), based within the radius around your city, and reveals up to max_people of them with a work email checked right before you get it. Each one becomes a HighLevel contact (matched by email) with first and last name, company, city, the tag from Settings and the source, ready for your HighLevel campaigns and workflows.\n\nCosts: 1 credit per revealed contact with a passing email, capped by max_people a week.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a HighLevel credential to **Create or update in HighLevel**.\n4. Set keywords, place, radius_miles, max_people and tag in **Settings**, then activate.\n\n### Customization\nRun one copy per niche with its own tag, or add an industry filter for a tighter list.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "8c3324dc-9e36-477c-bd71-b959d2053ea5",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reveal\nOwners in your niche around your city, at most max_people a week.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "0d209485-3e15-4f3b-94f5-04e061e57205",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## HighLevel\nUpsert by email with tag and source.",
+        "height": 280,
+        "width": 260,
+        "color": 7
+      },
+      "id": "f4ffdeb7-b7be-491f-b0f6-a687cf53a436",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "637c61d5-3dea-423e-8fd8-9bad84ce7028",
+      "name": "Every Monday at 6:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0c705e21-5322-4da2-b669-bc9d770d1c44",
+              "name": "keywords",
+              "value": "dentist, med spa, roofing",
+              "type": "string"
+            },
+            {
+              "id": "5a3dda56-a14f-4a9c-9158-48afc2238c74",
+              "name": "place",
+              "value": "Austin, Texas",
+              "type": "string"
+            },
+            {
+              "id": "90fb57d2-30a2-4dbf-b4d3-37a1d3b9c0fb",
+              "name": "radius_miles",
+              "value": "20",
+              "type": "number"
+            },
+            {
+              "id": "e62d3357-1651-4719-b1f4-b30b84b9802c",
+              "name": "max_people",
+              "value": "25",
+              "type": "number"
+            },
+            {
+              "id": "74073649-1913-40f8-96a0-96d1223dc72a",
+              "name": "tag",
+              "value": "argorant-prospect",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "02385faa-171b-4459-a077-133491e66f4e",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "filters",
+        "filterSource": "fields",
+        "filters": {
+          "keywords": "={{ $('Settings').first().json.keywords }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "Partner"
+          ],
+          "nearPlace": "={{ $('Settings').first().json.place }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "revealCount": "={{ $('Settings').first().json.max_people }}",
+        "simplify": true
+      },
+      "id": "346f891d-6efc-412f-a571-dd5ba9693f93",
+      "name": "Reveal local owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "create",
+        "email": "={{ $json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $json.first_name }}",
+          "lastName": "={{ $json.last_name }}",
+          "city": "={{ $json.city }}",
+          "tags": "={{ $('Settings').first().json.tag }}",
+          "source": "Argorant prospecting",
+          "notes": "={{ $json.title }} at {{ $json.company }}"
+        }
+      },
+      "id": "f63bb183-285b-47f0-b62e-1e5f6d2d762c",
+      "name": "Create or update in HighLevel",
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 6:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Reveal local owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal local owners": {
+      "main": [
+        [
+          {
+            "node": "Create or update in HighLevel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

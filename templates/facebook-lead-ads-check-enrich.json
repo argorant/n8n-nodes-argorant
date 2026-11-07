@@ -1,0 +1,296 @@
+{
+  "name": "Check and enrich Facebook lead ad signups, then send them to HubSpot and a nurture campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Check and enrich Facebook lead ad signups, then send them to HubSpot and a nurture campaign\n\n### How it works\nClean leads from ads before anyone calls them. The Facebook Lead Ads Trigger fires for each new lead on your form. Argorant checks the email right away. A valid address is enriched with title and company, upserted in HubSpot with name, job title and company, and added to your nurture campaign. Any other result (invalid, risky, catch-all or unknown) is upserted in HubSpot with lead status Unqualified and the check result, so your team can review it, and is not added.\n\nCosts: half a credit per fresh check; 1 credit when enrichment finds the person. Adding to the campaign is free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Facebook Lead Ads credential and pick the page and form in **New lead ad signup**.\n4. Add a HubSpot App Token credential to both HubSpot nodes.\n5. Pick the campaign in **Add to nurture campaign** and activate.\n\n### Customization\nMap more form questions into HubSpot properties, or alert sales in team chat for senior titles.",
+        "height": 670,
+        "width": 520,
+        "color": 1
+      },
+      "id": "02e2ad3a-0ca8-4126-acf2-0623c880d4c2",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check\nEvery new ad lead gets its email checked (half a credit per fresh check).",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "761911cb-540e-4da7-a813-8bdfd64f3256",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Valid leads\nEnriched (1 credit when found), in HubSpot and in the nurture campaign.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "5672db67-12d6-4603-9285-424b9aa11c0a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "event": "newLead",
+        "page": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "form": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "id": "3b890533-797a-4435-b6af-bd8466837c34",
+      "name": "New lead ad signup",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "57302b5d-5420-4ae0-aeb0-596fe6028f74"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.email }}"
+      },
+      "id": "4660e56c-769a-4b73-baa0-75012cd1fc7a",
+      "name": "Check the email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "75404030-bfe6-4e0b-98bf-d923318d9694",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "71006f2e-a314-4a8c-b5c6-82b33b35b69b",
+      "name": "Valid email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $('New lead ad signup').item.json.email }}",
+        "simplify": true
+      },
+      "id": "fcb4d23a-b377-4b4b-a0b6-758dfaadd0e7",
+      "name": "Enrich the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('New lead ad signup').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('New lead ad signup').item.json.first_name || ($('New lead ad signup').item.json.full_name || '').split(' ')[0] }}",
+          "lastName": "={{ $('New lead ad signup').item.json.last_name || '' }}",
+          "jobTitle": "={{ $json.title || '' }}",
+          "companyName": "={{ $json.company || $('New lead ad signup').item.json.company_name || '' }}"
+        },
+        "options": {}
+      },
+      "id": "4666e938-d792-4135-859e-45b4a2cba786",
+      "name": "Upsert in HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $('New lead ad signup').item.json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('New lead ad signup').item.json.first_name }}",
+          "last_name": "={{ $('New lead ad signup').item.json.last_name }}",
+          "company": "={{ $('Enrich the person').item.json.company || $('New lead ad signup').item.json.company_name }}",
+          "title": "={{ $('Enrich the person').item.json.title || '' }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "source",
+              "value": "lead ad"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "9c0d950d-285e-46ec-818c-35e86d2df207",
+      "name": "Add to nurture campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('New lead ad signup').item.json.email }}",
+        "additionalFields": {
+          "leadStatus": "UNQUALIFIED",
+          "message": "=Argorant email check: {{ $json.status }}"
+        },
+        "options": {}
+      },
+      "id": "dfbbb687-6d0b-4c5d-a1e9-b19ec5eced0c",
+      "name": "Log as not valid",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "New lead ad signup": {
+      "main": [
+        [
+          {
+            "node": "Check the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the email": {
+      "main": [
+        [
+          {
+            "node": "Valid email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid email?": {
+      "main": [
+        [
+          {
+            "node": "Enrich the person",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log as not valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich the person": {
+      "main": [
+        [
+          {
+            "node": "Upsert in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Add to nurture campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,528 @@
+{
+  "name": "Reach founders and marketing heads of online stores that use a given technology",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Reach founders and marketing heads of online stores that use a given technology\n\n### How it works\nSell where your integration fits. Once a month Argorant counts founders, owners, C-level and marketing leaders at e-commerce, retail, apparel and consumer goods companies that use the technology in Settings (written as Argorant names it), in your countries. If the count is within max_people, the search is saved as a list, a campaign draft with two short emails is created, and once the list has filled (usually a minute or two) it is added to the draft; otherwise nothing is saved or spent. Slack gets the numbers either way. Review the draft, attach mailboxes and launch it in Argorant.\n\nCosts: free until the list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set technology, country and max_people in **Settings**.\n4. Edit the emails in **Create the campaign draft**, pick the channel in **Report** and activate.\n\n### Customization\nNarrow by company size with the employee filter in the count and list nodes.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "f91bc416-d638-404b-88b6-d4e56e953a90",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size\nFree count of store leaders on the technology, checked against max_people.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "40fc1445-eddd-466e-a9c9-2583b7ec57e6",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft and fill\nList and draft are free. Once the list has filled, it joins the draft (1 credit per new person).",
+        "height": 280,
+        "width": 1660,
+        "color": 7
+      },
+      "id": "d0c482d0-aa32-4918-9e9d-61ec0490034d",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "3a9a646f-c52a-412f-bf12-2ca9b102a678",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2957e7f1-3e84-4489-b4dc-2220940f048e",
+              "name": "technology",
+              "value": "Your platform",
+              "type": "string"
+            },
+            {
+              "id": "09d87f34-b3ef-449e-b656-30327052d046",
+              "name": "country",
+              "value": "United States",
+              "type": "string"
+            },
+            {
+              "id": "a635e246-2d8a-4d1c-bffc-805f1631ffa8",
+              "name": "max_people",
+              "value": "300",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "90523ea8-2d57-47a7-9809-62591e4f92d1",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "technologies": "={{ $('Settings').item.json.technology }}",
+          "country": "={{ [$('Settings').item.json.country] }}",
+          "industries": [
+            "E-commerce",
+            "Retail",
+            "Apparel & Fashion",
+            "Consumer Goods"
+          ],
+          "seniority": [
+            "Founder",
+            "Owner",
+            "C-Level"
+          ],
+          "title": "founder, owner, CEO, head of marketing, marketing director, CMO, head of ecommerce"
+        }
+      },
+      "id": "88bd1adb-d5dd-4241-859d-9aa53a910fe0",
+      "name": "Count store leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d93a56b-a967-4053-af22-e873cd41703e",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_people }}"
+            },
+            {
+              "id": "9cf4294d-8e4a-42be-9807-d75cf3c5f2b5",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4d6a99da-6716-4afa-a87c-3cad349bfc99",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Stores on {{ $('Settings').item.json.technology }} {{ $now.toFormat('yyyy-MM') }}",
+        "peopleSource": "filters",
+        "filters": {
+          "technologies": "={{ $('Settings').item.json.technology }}",
+          "country": "={{ [$('Settings').item.json.country] }}",
+          "industries": [
+            "E-commerce",
+            "Retail",
+            "Apparel & Fashion",
+            "Consumer Goods"
+          ],
+          "seniority": [
+            "Founder",
+            "Owner",
+            "C-Level"
+          ],
+          "title": "founder, owner, CEO, head of marketing, marketing director, CMO, head of ecommerce"
+        },
+        "simplify": true
+      },
+      "id": "b5020fed-0a84-417c-837b-c079cb4bc2fd",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "create",
+        "name": "=Stores on {{ $('Settings').item.json.technology }} {{ $now.toFormat('yyyy-MM') }}",
+        "steps": {
+          "step": [
+            {
+              "subject": "Quick idea for {{company|your store}}",
+              "body": "Hi {{first_name|there}},\n\nWe help stores like {{company|yours}} get more out of the tools you already run.\n\nWorth a 15 minute call next week?\n\nAlex",
+              "delayDays": 0
+            },
+            {
+              "subject": "",
+              "body": "Hi {{first_name|there}}, should I send a two-line summary instead?",
+              "delayDays": 4
+            }
+          ]
+        },
+        "senderMode": "none",
+        "settings": {
+          "tags": "ecommerce"
+        },
+        "simplify": true
+      },
+      "id": "e13e4542-f4a6-485e-b2b2-4689e5fd2275",
+      "name": "Create the campaign draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "8182ed82-289b-4eb4-bd9f-bd6b31718984",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        340
+      ],
+      "webhookId": "1db21868-b817-4093-ae1e-3adbe0e7b0ca"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "9a1d6c53-dabd-436b-855f-e7efb978200b",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58e279bf-a38d-4de1-b1d2-aa91aedb9f81",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "9cf9483e-0737-43d5-8e35-bc9043bfcf22",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3508ad6a-0e00-4b55-91ad-3bae967cd25b",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create the campaign draft').item.json.id }}"
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "0b1fde0b-4daf-4130-9c49-cec1971bcba8",
+      "name": "Add the list to the draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Stores on {{ $('Settings').item.json.technology }}: {{ $('Count store leaders').item.json.count }} people are in the draft {{ $('Create the campaign draft').item.json.url }}. Review it, attach mailboxes and launch.",
+        "otherOptions": {}
+      },
+      "id": "2ff934ec-e9aa-4a81-b032-9904d2c56755",
+      "name": "Report: draft filled",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Stores on {{ $('Settings').item.json.technology }}: {{ $json.count }} people match, above your budget of {{ $('Settings').item.json.max_people }} (or none). Nothing was saved or spent.",
+        "otherOptions": {}
+      },
+      "id": "0aeaa92d-9cad-4b00-9ff7-8611d7f52236",
+      "name": "Report: nothing added",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add the list to the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count store leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count store leaders": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Report: nothing added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Create the campaign draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the campaign draft": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the list to the draft": {
+      "main": [
+        [
+          {
+            "node": "Report: draft filled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

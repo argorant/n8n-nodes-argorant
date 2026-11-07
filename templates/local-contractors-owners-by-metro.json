@@ -1,0 +1,520 @@
+{
+  "name": "Contractors by metro: roofing, HVAC, plumbing and electrical owners into a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Contractors by metro: roofing, HVAC, plumbing and electrical owners into a campaign\n\n### How it works\nWork one region at a time with a steady weekly rhythm. Every Monday the workflow splits the metros in Settings (for example Austin, Texas; Denver, Colorado) and, for each, counts owners, founders and partners at construction companies whose description matches your trades (roofing, HVAC, plumbing, electrical) within the radius. Metros within max_per_metro are saved as a list, which joins your campaign once it has filled; larger ones are only reported, so you can narrow them. Slack gets one line per metro. Contractors already in the campaign are not added twice.\n\nCosts: free until a list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set metros, radius_miles, trades and max_per_metro in **Settings**.\n4. Pick the campaign in **Add the metro list** and the channel in **Weekly summary**, then activate.\n\n### Customization\nUse one campaign per trade by duplicating the branch with different keywords.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "78cf15ad-127f-47bc-b21e-a35b61545e17",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Count per metro\nFree count of contractor owners around each metro.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "9a2937be-3cc7-4567-a21c-afc82a27a95e",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Fill the campaign\nEach list joins the campaign once it has filled (1 credit per new person).",
+        "height": 280,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "3b121198-c92e-4acb-a3b2-17635be7cb04",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Report\nOne Slack line per metro.",
+        "height": 120,
+        "width": 460,
+        "color": 7
+      },
+      "id": "ca4712ca-55bd-4d37-be4f-5adce9598c11",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "aaea37b7-8932-4d13-8897-beb2e93dc6ab",
+      "name": "Every Monday at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "982d6a02-30d3-4f12-a861-830ea6f8def1",
+              "name": "metros",
+              "value": "Austin, Texas; Denver, Colorado",
+              "type": "string"
+            },
+            {
+              "id": "68489292-1d96-40ae-9090-cac15f9e5c11",
+              "name": "radius_miles",
+              "value": "25",
+              "type": "number"
+            },
+            {
+              "id": "da7f9730-70cd-4fe7-b293-3c1a58d98cca",
+              "name": "trades",
+              "value": "roofing, hvac, plumbing, electrical contractor",
+              "type": "string"
+            },
+            {
+              "id": "e2a1c43b-09d6-4e2c-b07f-99a5a84bcbf4",
+              "name": "max_per_metro",
+              "value": "300",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff54c23c-3f88-4a46-916f-5f84baa91691",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json;\nreturn String(s.metros || '').split(';').map(m => m.trim()).filter(Boolean).map(metro => ({ json: { metro } }));"
+      },
+      "id": "a7b5f0d8-2a33-4dd4-9253-7df5657c4f33",
+      "name": "One item per metro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Construction"
+          ],
+          "keywords": "={{ $('Settings').first().json.trades }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level",
+            "Partner"
+          ],
+          "nearPlace": "={{ $json.metro }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        }
+      },
+      "id": "b7d2ad1e-41ef-4346-b88f-7b173b08cb3c",
+      "name": "Count contractor owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ee169e1b-adf6-4978-ae4c-5309f229bc86",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').first().json.max_per_metro }}"
+            },
+            {
+              "id": "63b9242c-e178-4019-8841-8956c126f72a",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a8ae3b37-68d3-45f2-ad7d-247a28880d66",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Contractors {{ $('One item per metro').item.json.metro }} {{ $now.toISODate() }}",
+        "peopleSource": "filters",
+        "filters": {
+          "industries": [
+            "Construction"
+          ],
+          "keywords": "={{ $('Settings').first().json.trades }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level",
+            "Partner"
+          ],
+          "nearPlace": "={{ $('One item per metro').item.json.metro }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "simplify": true
+      },
+      "id": "5314f17b-9f7d-4395-ab9f-16684e53639a",
+      "name": "Save the metro list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save the metro list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "c1e3a8db-071c-4fd2-ac05-697b0aa56a9b",
+      "name": "Add the metro list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const metros = $('One item per metro').all().map(i => i.json.metro);\nconst max = $('Settings').first().json.max_per_metro;\nconst lines = $input.all().map((i, k) => `${metros[k]}: ${i.json.count} owners${i.json.count > 0 && i.json.count <= max ? ' (added)' : ' (not added: over budget or none)'}`);\nreturn [{ json: { text: `Contractors this week (budget ${max} per metro):\\n` + lines.join('\\n') } }];"
+      },
+      "id": "bd235800-f652-49bb-8b7a-d32cca396976",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "f86e8c56-6ffd-416e-8b9c-6e2e5d041d5a",
+      "name": "Weekly summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "3c7144a3-2d76-4dce-991a-056cc7faadc8",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        -100
+      ],
+      "webhookId": "f7c8276c-fd0f-4b14-8477-8302a12a34a4"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save the metro list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "6917eb66-8869-4836-a8ae-d4ae74824bb2",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ce81059-c163-427c-b7ce-1e7db95f0f4c",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "d3de41de-e5d1-45fc-bc1f-bc46650eca3c",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "160410a3-bd91-48b3-b967-257ad8a03f38",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "One item per metro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per metro": {
+      "main": [
+        [
+          {
+            "node": "Count contractor owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count contractor owners": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save the metro list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the metro list": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add the metro list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary": {
+      "main": [
+        [
+          {
+            "node": "Weekly summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

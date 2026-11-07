@@ -1,0 +1,234 @@
+{
+  "name": "Dental and medical practices near you: owners and practice managers into a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Dental and medical practices near you: owners and practice managers into a campaign\n\n### How it works\nReach the people who run the practice. Once a month the workflow asks Argorant for owners, partners and practice or office managers at medical practices and health care companies whose description matches your keywords (dental, dentist, orthodontics by default), based within the radius around your place. Up to max_people are revealed with a work email checked right before you get it, and each joins your campaign with {{practice}} and {{city}} as variables. People revealed before are free and nobody is added twice.\n\nCosts: 1 credit per revealed contact with a passing email, capped by max_people.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set place, radius_miles, keywords and max_people in **Settings**.\n4. Pick the campaign in **Add with practice and city** and activate.\n\n### Customization\nUse clinic, physiotherapy or veterinary as keywords to reach other practices.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "bf7e7527-1ad9-44f1-b3ab-60797b84b832",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reveal\nOwners and practice managers within the radius, at most max_people a month.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "74f9a524-891e-4552-873c-790c9e22e075",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Campaign\nPractice name and city travel along as variables.",
+        "height": 280,
+        "width": 260,
+        "color": 7
+      },
+      "id": "46df6355-6a88-4fea-931c-527c9207fef4",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "148dedd8-793a-4ccf-aef7-c6d722408f06",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "745f33df-58a0-4159-9ef1-45bba9e46f86",
+              "name": "place",
+              "value": "Austin, Texas",
+              "type": "string"
+            },
+            {
+              "id": "06eccd5d-634f-46ba-b085-1c55cc7ce312",
+              "name": "radius_miles",
+              "value": "15",
+              "type": "number"
+            },
+            {
+              "id": "30611d99-c20d-4652-9a33-bf387179e179",
+              "name": "keywords",
+              "value": "dental, dentist, orthodontics",
+              "type": "string"
+            },
+            {
+              "id": "da3a37df-f82c-45bd-8107-87f77cfa3040",
+              "name": "titles",
+              "value": "owner, partner, practice manager, office manager, dentist",
+              "type": "string"
+            },
+            {
+              "id": "49c58524-b39d-4a9f-bc5d-63f526fa3f6f",
+              "name": "max_people",
+              "value": "50",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa82949e-fa0c-44b9-a9ae-f5973271171f",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "filters",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Medical Practice",
+            "Hospital & Health Care"
+          ],
+          "keywords": "={{ $('Settings').first().json.keywords }}",
+          "title": "={{ $('Settings').first().json.titles }}",
+          "nearPlace": "={{ $('Settings').first().json.place }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "revealCount": "={{ $('Settings').first().json.max_people }}",
+        "simplify": true
+      },
+      "id": "684296d6-e8b6-430a-92f5-6e581eeae7f4",
+      "name": "Reveal practice leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}",
+          "title": "={{ $json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "practice",
+              "value": "={{ $json.company }}"
+            },
+            {
+              "name": "city",
+              "value": "={{ $json.city }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "59f7959e-16fd-412a-b201-6847b1fc88e8",
+      "name": "Add with practice and city",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Reveal practice leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal practice leaders": {
+      "main": [
+        [
+          {
+            "node": "Add with practice and city",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,308 @@
+{
+  "name": "When a Pipedrive deal is lost, re-engage the contact 90 days later",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## When a Pipedrive deal is lost, re-engage the contact 90 days later\n\n### How it works\nA lost deal is often a deal for later. The Pipedrive Trigger fires when a deal changes; only deals that just turned lost go on. The workflow waits wait_days (90 by default) inside n8n, then reads the deal's contact person, so a changed email is picked up. The person joins your re-engagement campaign with {{lost_reason}} and {{deal_title}} as variables, and a note on the deal records it. Every address is checked before it joins; people who are blocked or unsubscribed are never added.\n\nYour own contacts cost no credits.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Pipedrive credential to **Deal updated**, **Get the contact** and **Note on the deal**.\n4. Set wait_days in **Settings**, pick the campaign in **Add to re-engagement campaign** and activate.\n\n### Customization\nSkip some lost reasons with a filter, or use a shorter wait for small deals.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "ece027a5-4a73-43f6-ac47-68afc25846f4",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Lost deals\nOnly deals that just turned lost go on.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "a345650d-ecd5-4dd8-9dab-51ec502434f5",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Later, a second try\nAfter wait_days the contact joins the re-engagement campaign. Only valid emails join.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "f8babda8-ca41-4108-9824-0b2d17d1f880",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "action": "change",
+        "entity": "deal"
+      },
+      "id": "61889065-a601-4b66-9985-a7f2a67b38fe",
+      "name": "Deal updated",
+      "type": "n8n-nodes-base.pipedriveTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2831b795-b065-4083-aadf-2e17d91d3d1a"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec29639e-fd53-44f5-8b66-e32c715d3aea",
+              "name": "wait_days",
+              "value": "90",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "f6ade217-f6a4-4905-b9ed-0d1c88482d17",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "13f458a9-779c-48ea-978a-248706ca5d23",
+              "leftValue": "={{ $json.data.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "lost"
+            },
+            {
+              "id": "0b563463-3663-4ad0-8db9-a85e3dd1c6ed",
+              "leftValue": "={{ ($json.previous || {}).status }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "lost"
+            },
+            {
+              "id": "777edab9-07e8-46f8-9007-741ae7bb79c0",
+              "leftValue": "={{ $json.data.person_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0185e593-58d5-44f6-9b85-70f1261dbd9f",
+      "name": "Just lost?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.wait_days }}",
+        "unit": "days"
+      },
+      "id": "de31bcdc-8269-432f-aa0c-385fd82b6cdd",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -100
+      ],
+      "webhookId": "746b6d0a-c1aa-45cc-8a8d-78498e90e99b"
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "operation": "get",
+        "personId": "={{ $('Deal updated').item.json.data.person_id }}"
+      },
+      "id": "14c351d2-b48d-4906-b1ba-b5a9e4efff9d",
+      "name": "Get the contact",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ ($json.email || []).find(e => e.primary)?.value || ($json.email || [])[0]?.value || '' }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.org_name }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "lost_reason",
+              "value": "={{ $('Deal updated').item.json.data.lost_reason || '' }}"
+            },
+            {
+              "name": "deal_title",
+              "value": "={{ $('Deal updated').item.json.data.title }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "a5e4ff6b-1770-42b8-bad5-d728cceb7648",
+      "name": "Add to re-engagement campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "note",
+        "operation": "create",
+        "content": "=Added to the Argorant re-engagement campaign on {{ $now.toISODate() }}.",
+        "additionalFields": {
+          "deal_id": "={{ $('Deal updated').item.json.data.id }}"
+        }
+      },
+      "id": "f11103c4-5894-43d2-9047-1170186dfc02",
+      "name": "Note on the deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Deal updated": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Just lost?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Just lost?": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get the contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the contact": {
+      "main": [
+        [
+          {
+            "node": "Add to re-engagement campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to re-engagement campaign": {
+      "main": [
+        [
+          {
+            "node": "Note on the deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

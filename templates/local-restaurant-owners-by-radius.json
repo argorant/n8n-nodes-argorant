@@ -1,0 +1,451 @@
+{
+  "name": "Restaurant owners near you: a sheet of checked contacts and a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Restaurant owners near you: a sheet of checked contacts and a campaign\n\n### How it works\nLocal prospecting without scraping maps. The form asks for a city or postal code, a radius in miles and how many people you want. Argorant counts owners, founders and executives at restaurants, hospitality and food and beverage companies based within that radius (free), then reveals up to your number with a work email checked right before you get it. Each person is appended to your Google Sheet (name, title, restaurant, email, city) and added to your campaign, which stays a draft until you launch it.\n\nCosts: 1 credit per revealed contact with a passing email, at most 100 per run (the limit in Settings). Adding them to the campaign is free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns date, name, title, company, email, city and pick it in **Append to the sheet**.\n4. Pick the campaign in **Add to the campaign**; change the limit of 100 in **Settings** if you want a lower one.\n5. Activate and open the production URL of **Area form**.\n\n### Customization\nChange the industries in the count and reveal nodes for cafes, bars or hotels only.",
+        "height": 643,
+        "width": 520,
+        "color": 1
+      },
+      "id": "2d372388-bf60-4569-a4ce-a70e2272aeb6",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size the area\nFree count of owners within the radius.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "163d4f85-5dde-4ca1-9e35-f9d823fd07a7",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reveal and use\n1 credit per contact with a passing email, capped. Sheet row and campaign.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "246830a5-8e85-484e-a002-e0c27f693883",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Restaurant owners near you",
+        "formDescription": "Where, how far around and how many people.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "City or postal code",
+              "requiredField": true,
+              "placeholder": "Austin, Texas"
+            },
+            {
+              "fieldLabel": "Radius in miles",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "How many people",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "bb0f2a65-05d4-420e-9961-3461669c93a7",
+      "name": "Area form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "93b8f8d2-e437-42a5-9113-f40704e0cdb0"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dcd4c814-b04d-4cb5-9eee-a80765a161a8",
+              "name": "max_people",
+              "value": "={{ Math.min(Number($json['How many people']) || 1, 100) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "721b34f3-da67-44f3-a895-c37b7696b31a",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Restaurants",
+            "Hospitality",
+            "Food & Beverages"
+          ],
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level",
+            "Partner"
+          ],
+          "nearPlace": "={{ $('Area form').first().json['City or postal code'] }}",
+          "radius": "={{ $('Area form').first().json['Radius in miles'] }}",
+          "radiusUnit": "mi"
+        }
+      },
+      "id": "56cdd938-49bb-4674-a203-43589122a8c1",
+      "name": "Count owners nearby",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0d622614-6c7f-4bfe-9110-e89020b51e39",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "030dc9ab-3e3f-425c-a316-05ad341c87f4",
+      "name": "Anyone nearby?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "filters",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Restaurants",
+            "Hospitality",
+            "Food & Beverages"
+          ],
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level",
+            "Partner"
+          ],
+          "nearPlace": "={{ $('Area form').first().json['City or postal code'] }}",
+          "radius": "={{ $('Area form').first().json['Radius in miles'] }}",
+          "radiusUnit": "mi"
+        },
+        "revealCount": "={{ $('Settings').first().json.max_people }}",
+        "simplify": true
+      },
+      "id": "37601014-39b4-406f-ba84-37d94973b678",
+      "name": "Reveal owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISODate() }}",
+            "name": "={{ $json.full_name }}",
+            "title": "={{ $json.title }}",
+            "company": "={{ $json.company }}",
+            "email": "={{ $json.email }}",
+            "city": "={{ $json.city }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4df3fb49-bd9b-474b-bbd8-259040adafb0",
+      "name": "Append to the sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "recordIds",
+        "recordIds": "={{ $('Reveal owners').item.json.record_id }}",
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "be3f2e4d-4e26-4a6f-b649-64effadff2dd",
+      "name": "Add to the campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Contacts are in your sheet",
+        "completionMessage": "={{ $('Count owners nearby').first().json.count }} owners match. Revealed people are in the sheet and the campaign draft.",
+        "options": {}
+      },
+      "id": "c74503bf-803b-4dbc-aee4-8d0dbdaea19a",
+      "name": "Done",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Nobody found",
+        "completionMessage": "Try a larger radius or a nearby city.",
+        "options": {}
+      },
+      "id": "bd8105e3-1112-4ed3-9ce1-0185262832c7",
+      "name": "Nobody nearby",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Area form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count owners nearby",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count owners nearby": {
+      "main": [
+        [
+          {
+            "node": "Anyone nearby?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anyone nearby?": {
+      "main": [
+        [
+          {
+            "node": "Reveal owners",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nobody nearby",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal owners": {
+      "main": [
+        [
+          {
+            "node": "Append to the sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to the sheet": {
+      "main": [
+        [
+          {
+            "node": "Add to the campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the campaign": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
