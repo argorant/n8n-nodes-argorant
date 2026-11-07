@@ -489,7 +489,7 @@ export const campaignDescription: INodeProperties[] = [
 		required: true,
 		default: '',
 		placeholder: 'e.g. maya.chen@linfield.example',
-		description: "The person's email address, usually an expression such as {{ $JSON.email }}",
+		description: "The person's email address. Drag the email field of the input here, so each item adds one person.",
 		displayOptions: { show: { ...showFor('campaign', ['addLeads']), leadSource: ['items'] } },
 	},
 	{

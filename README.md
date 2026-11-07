@@ -100,6 +100,7 @@ Every operation states its cost in the node. Lists, campaigns, mailboxes and sav
 | ![Campaign launch with Confirm Launch](docs/screenshots/campaign-launch.png) | ![Reply get many](docs/screenshots/reply-get-many.png) |
 | ![Mailbox get many](docs/screenshots/mailbox-get-many.png) | ![Blocklist add](docs/screenshots/blocklist-add.png) |
 | ![Account get](docs/screenshots/account-get.png) | ![Argorant Trigger](docs/screenshots/trigger.png) |
+| ![Campaign add leads from input items](docs/screenshots/campaign-add-leads.png) | |
 
 ## What costs credits
 
