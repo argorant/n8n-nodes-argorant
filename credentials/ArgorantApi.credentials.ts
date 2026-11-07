@@ -1,5 +1,6 @@
 import type {
 	IAuthenticateGeneric,
+	Icon,
 	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties,
@@ -10,7 +11,9 @@ export class ArgorantApi implements ICredentialType {
 
 	displayName = 'Argorant API';
 
-	documentationUrl = 'https://argorant.com/docs/integrations/n8n';
+	icon: Icon = { light: 'file:../icons/argorant.svg', dark: 'file:../icons/argorant.dark.svg' };
+
+	documentationUrl = 'https://github.com/argorant/n8n-nodes-argorant?tab=readme-ov-file#credentials';
 
 	properties: INodeProperties[] = [
 		{
@@ -18,9 +21,11 @@ export class ArgorantApi implements ICredentialType {
 			name: 'apiKey',
 			type: 'string',
 			typeOptions: { password: true },
+			required: true,
 			default: '',
+			placeholder: 'ag_live_...',
 			description:
-				'Create a key at app.argorant.com/profile → API keys. Keys start with ag_live_.',
+				'Your Argorant API key. Create one in the Argorant app under Profile, API keys.',
 		},
 	];
 
@@ -35,8 +40,9 @@ export class ArgorantApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://argorant.com/api',
-			url: '/mcp/account',
+			baseURL: 'https://app.argorant.com',
+			url: '/api/v1/me',
+			method: 'GET',
 		},
 	};
 }

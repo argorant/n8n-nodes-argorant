@@ -1,50 +1,64 @@
 # n8n-nodes-argorant
 
-n8n community node for [Argorant](https://argorant.com) — search, count, reveal, and export verified B2B contacts. 614M contacts, 184 countries, verified at export time.
+This is an n8n community node for [Argorant](https://argorant.com). It lets you find leads, check every email, build lists and campaign drafts, and read replies in your n8n workflows, or hand those actions to an n8n AI agent as a tool.
 
-## Install
+Argorant is a B2B prospecting app: find the right people, get their work emails checked, write and send campaigns, and sort the replies, from the app or from your own AI.
 
-In n8n: **Settings → Community nodes → Install** → `n8n-nodes-argorant`
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
-Or on self-hosted: `npm install n8n-nodes-argorant`
+[Installation](#installation) · [Operations](#operations) · [Credentials](#credentials) · [Compatibility](#compatibility) · [Usage](#usage) · [Resources](#resources) · [Version history](#version-history)
 
-## Credentials
+## Installation
 
-Create an API key at [app.argorant.com/profile](https://app.argorant.com/profile) (API keys section), then add an **Argorant API** credential in n8n.
+Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation:
+
+1. In n8n, open **Settings > Community Nodes** and select **Install**.
+2. Enter `n8n-nodes-argorant`, confirm, and install.
+3. Add the **Argorant** node to a workflow.
 
 ## Operations
 
-| Resource | Operation | Cost | Notes |
+| Resource | Operation | What it does | Cost |
 |---|---|---|---|
-| People | Count | Free | Segment size for any filter combination |
-| People | Search | Free | Redacted preview of matches |
-| People | Reveal | Credits | Full details incl. verified email, phone, LinkedIn |
-| Export | Create | Credits | Async job; rows verified at export time |
-| Export | Get Status | Free | Poll until `status = completed` |
-| Export | Download | Free | CSV of the finished job |
+| Lead | Count | How many people match your filters | Free |
+| Lead | Search | A preview of the people who match: role, seniority, company and place, names masked | Free |
+| List | Create | Save a search, or the people you picked, as a list | Free |
+| List | Add People | Add people to a saved list, by record ID or by filters; people already in it are skipped | Free |
+| Email | Find | A work email from a first name, last name and company domain | 1 credit when found, 0.25 when nothing is found |
+| Email | Check | Whether an address can receive mail: valid, invalid, catch_all, risky or unknown | Half a credit per fresh check |
+| Campaign | Create Draft | A new campaign as a draft; nothing sends until you launch it in Argorant | Free |
+| Campaign | Add Leads | People from a saved list, from search record IDs or your own rows | 1 credit per new person from Argorant data; your own rows are free |
+| Reply | Get Many | Replies across your campaigns, newest first, with their status | Free |
 
-Filters: free-text query, title, seniority, department, industry, country/state/city, company name/domain, has-phone, has-LinkedIn. (Deliverability isn't a browse filter — every revealed/exported contact is verified live at that moment.)
+Filters for Lead and List: job titles, seniority, departments, industry, keywords, company names and domains, company size, countries, states, cities, free text, and business email only.
 
-## AI agents
+## Credentials
 
-All operations work as tools for n8n AI Agent nodes. Counts and searches are free, so agents can explore markets without consuming credits.
+1. Sign up at [argorant.com](https://argorant.com).
+2. In the Argorant app, open **Profile > API keys** ([app.argorant.com/profile](https://app.argorant.com/profile)) and create a key. It starts with `ag_live_`.
+3. In n8n, create an **Argorant API** credential and paste the key. n8n checks it right away.
 
-## Build
+The key acts as your Argorant account, with its plan, credits and limits. Counts, searches, lists and drafts never use credits.
 
-```bash
-npm install
-npm run build
-```
+## Compatibility
 
-## Release
+Built with the n8n community node CLI (`@n8n/node-cli`) and tested with n8n 2.46.6, self-hosted. The node has no runtime dependencies.
 
-Publishing is automated via `.github/workflows/release.yml` (npm publish with provenance on `v*` tags). One-time setup: push this directory to `github.com/argorant/n8n-nodes-argorant`, add an npm automation token as repo secret `NPM_TOKEN`. Then:
+## Usage
 
-```bash
-npm version patch   # bumps package.json + tags
-git push && git push --tags
-```
+**In a workflow.** A common flow: Lead > Count to size a market, List > Create to save it, Campaign > Create Draft, then Campaign > Add Leads with that list. Write the emails and launch in the Argorant app.
 
-After the first npm publish, submit for n8n verification (community node registry) — the `n8n-community-node-package` keyword is already set.
+**As an AI agent tool.** Connect the Argorant node to the **Tool** input of an **AI Agent** node. Pick the resource and operation, and let the model fill fields such as Job Titles or Countries (the sparkle button next to a field). A good first tool is Lead > Count: it is free, so the agent can size markets as often as it likes. Keep actions that use credits, such as Email > Find or Campaign > Add Leads, behind a human approval step if you want to control spend.
 
-Docs: [argorant.com/docs/integrations/n8n](https://argorant.com/docs/integrations/n8n)
+**Picking lists and campaigns.** The List and Campaign fields load your saved lists and campaigns, or take an ID.
+
+## Resources
+
+* [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+* [Argorant developer docs](https://docs.argorant.com)
+* [Argorant API reference](https://docs.argorant.com/docs/reference)
+
+## Version history
+
+* **0.2.0**: rebuilt node with Lead, List, Email, Campaign and Reply operations, usable as an AI agent tool, published with npm provenance. Replaces the 0.1.x preview (its reveal and export operations and the trigger node were removed).
+* **0.1.1**: first preview.

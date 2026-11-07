@@ -1,50 +1,60 @@
 {
   "name": "n8n-nodes-argorant",
-  "version": "0.1.0",
-  "description": "n8n community node for Argorant — search, count, reveal, and export verified B2B contacts (614M records, 184 countries, verified at export time).",
+  "version": "0.2.0",
+  "description": "n8n node for Argorant: find leads, check every email, build lists and campaigns, and read replies in your workflows or from an AI agent.",
+  "license": "MIT",
+  "homepage": "https://argorant.com",
   "keywords": [
     "n8n-community-node-package",
+    "n8n",
     "argorant",
-    "b2b",
     "leads",
-    "contacts",
+    "b2b",
+    "email-finder",
+    "email-verification",
+    "cold-email",
     "sales"
   ],
-  "license": "MIT",
-  "homepage": "https://argorant.com/docs/integrations/n8n",
   "author": {
     "name": "Argorant",
-    "email": "support@argorant.com"
+    "email": "support@argorant.com",
+    "url": "https://argorant.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/argorant/n8n-nodes-argorant.git"
+    "url": "git+https://github.com/argorant/n8n-nodes-argorant.git"
   },
-  "engines": {
-    "node": ">=18.10"
+  "bugs": {
+    "url": "https://github.com/argorant/n8n-nodes-argorant/issues"
   },
-  "main": "index.js",
   "scripts": {
-    "build": "tsc && mkdir -p dist/nodes/Argorant dist/nodes/ArgorantTrigger && cp nodes/Argorant/argorant.svg dist/nodes/Argorant/ && cp nodes/Argorant/argorant.svg dist/nodes/ArgorantTrigger/",
-    "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
     "dist"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
+    "strict": true,
     "credentials": [
       "dist/credentials/ArgorantApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Argorant/Argorant.node.js",
-      "dist/nodes/ArgorantTrigger/ArgorantTrigger.node.js"
+      "dist/nodes/Argorant/Argorant.node.js"
     ]
   },
   "devDependencies": {
-    "n8n-workflow": "^1.48.0",
-    "typescript": "^5.4.0"
+    "@n8n/node-cli": "0.55.5",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "release-it": "^21.1.0",
+    "typescript": "5.9.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
