@@ -66,6 +66,9 @@ export const TRIGGER_EVENTS: INodePropertyOptions[] = [
 	},
 ];
 
+/** Events about one person's reply: the node can add the conversation ID for Reply > Get, Set Status or Send Reply. */
+const REPLY_EVENTS = new Set(['reply.received', 'reply.positive', 'email.unsubscribed']);
+
 const CAMPAIGN_EVENTS = new Set([
 	'campaign.paused',
 	'campaign.resumed',
@@ -79,6 +82,29 @@ interface HookState extends IDataObject {
 	webhookId?: string;
 	webhookSecret?: string;
 	webhookUrl?: string;
+}
+
+/** The newest conversation of this person in this campaign: its ID and the mailbox that received it. */
+async function findConversation(this: IWebhookFunctions, leadEmail: string, campaignId: string): Promise<IDataObject> {
+	const qs: IDataObject = { folder: 'all', q: leadEmail, limit: 5 };
+	if (campaignId) qs.campaign_id = campaignId;
+	try {
+		const page = (await argorantRequest.call(this, 'GET', '/api/v1/inbox', { qs, maxRetries: 2 })) as IDataObject;
+		const events = (page.events as IDataObject[]) ?? [];
+		const match =
+			events.find((e) => String(e.from_email ?? '').toLowerCase() === leadEmail.toLowerCase()) ?? events[0];
+		if (!match) return { conversation_id: null };
+		return {
+			conversation_id: match.id,
+			inbox_email: match.inbox_email,
+			lead_name: match.lead_name,
+			company: match.company,
+			campaign_name: match.campaign_name,
+		};
+	} catch (error) {
+		// The event still starts the workflow; the lookup is a convenience.
+		return { conversation_id: null, conversation_lookup_error: (error as Error).message };
+	}
 }
 
 export class ArgorantTrigger implements INodeType {
@@ -134,6 +160,14 @@ export class ArgorantTrigger implements INodeType {
 				placeholder: 'Add Option',
 				default: {},
 				options: [
+					{
+						displayName: 'Add Conversation ID',
+						name: 'addConversation',
+						type: 'boolean',
+						default: true,
+						description:
+							'Whether to look up the conversation of a reply, so later nodes can read, label or answer it. One free API call per reply.',
+					},
 					{
 						displayName: 'Campaign Names or IDs',
 						name: 'campaigns',
@@ -247,6 +281,9 @@ export class ArgorantTrigger implements INodeType {
 			created_at: body.created_at,
 			...data,
 		};
+		if (!isTest && options.addConversation !== false && REPLY_EVENTS.has(event) && data.lead_email) {
+			Object.assign(item, await findConversation.call(this, String(data.lead_email), String(data.campaign_id ?? '')));
+		}
 		return { workflowData: [this.helpers.returnJsonArray([item])] };
 	}
 }

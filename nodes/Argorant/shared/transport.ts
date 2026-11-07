@@ -5,6 +5,7 @@ import type {
 	IHttpRequestMethods,
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
+	IWebhookFunctions,
 	JsonObject,
 } from 'n8n-workflow';
 import { NodeApiError, sleep } from 'n8n-workflow';
@@ -14,7 +15,7 @@ export const BASE_URL = 'https://app.argorant.com';
 export const PLANS_URL = 'https://app.argorant.com/settings?section=plans';
 export const API_KEYS_URL = 'https://app.argorant.com/settings?section=api-keys';
 
-export type ArgorantContext = IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions;
+export type ArgorantContext = IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions | IWebhookFunctions;
 
 export interface ArgorantRequestOptions {
 	qs?: IDataObject;
