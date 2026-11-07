@@ -393,6 +393,12 @@ export const campaignDescription: INodeProperties[] = [
 		showFor('campaign', ['sendTestEmail']),
 	),
 	notice('stopNotice', 'Stopping is final: the campaign cannot send again.', showFor('campaign', ['stop'])),
+	confirmField(
+		'confirmLaunch',
+		'Confirm Launch',
+		'Whether to really start sending. Off: the node only checks that the campaign is ready and sends nothing.',
+		showFor('campaign', ['launch', 'resume']),
+	),
 
 	// create
 	{
@@ -791,14 +797,6 @@ export const campaignDescription: INodeProperties[] = [
 		description: 'Whether to replace a line a person already has. Off: saved lines are kept and listed.',
 		displayOptions: { show: showFor('campaign', ['writePersonalLines']) },
 	},
-
-	// launch + resume
-	confirmField(
-		'confirmLaunch',
-		'Confirm Launch',
-		'Whether to really start sending. Off: the node only checks that the campaign is ready and sends nothing.',
-		showFor('campaign', ['launch', 'resume']),
-	),
 
 	// stats
 	{
