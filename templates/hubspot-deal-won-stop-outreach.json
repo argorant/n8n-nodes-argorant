@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Stop all outreach to a company when its HubSpot deal is won\n\n### How it works\nNew customers should never get a cold email. The HubSpot Trigger fires when a deal stage changes. If the new stage is Closed won, the workflow reads the deal's contacts, gets their emails and adds each address to the Argorant blocklist. A blocked address leaves every running campaign at once and is never added again. With block_domain on, the whole company domain is blocked too, so colleagues are skipped as well.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a HubSpot credential to **Deal stage changed**, **Get deal contacts** and **Get contact email**.\n4. In **Settings**, check won_stage (closedwon in the default pipeline) and block_domain.\n5. Activate the workflow.\n\n### Customization\nUse a different stage, or post a note to your team chat after the block.",
-        "height": 592,
+        "content": "## Stop all outreach to a company when its HubSpot deal is won\n\n### How it works\nNew customers should never get a cold email. The HubSpot Trigger fires when a deal stage changes. If the new stage is Closed won, the workflow reads the deal's contacts, gets their emails and adds each address to the Argorant blocklist. A blocked address leaves every running campaign at once and is never added again. With block_domain on, the whole company domain is blocked too, so colleagues are skipped as well.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a HubSpot Developer API credential to **Deal stage changed** and a HubSpot App Token credential (private app, deals and contacts read) to **Get deal contacts** and **Get contact email**.\n4. In **Settings**, check won_stage (closedwon in the default pipeline) and block_domain.\n5. Activate the workflow.\n\n### Customization\nUse a different stage, or post a note to your team chat after the block.",
+        "height": 609,
         "width": 520,
         "color": 1
       },
@@ -166,6 +166,7 @@
     },
     {
       "parameters": {
+        "authentication": "appToken",
         "resource": "contact",
         "operation": "get",
         "contactId": {

@@ -26,4 +26,4 @@ Free: blocking uses no credits.
 ### Community node
 This template uses the Argorant community node `n8n-nodes-argorant` (version 0.3.0). On n8n Cloud and self-hosted n8n: Settings > Community nodes > Install > `n8n-nodes-argorant`. Guide: https://github.com/argorant/n8n-nodes-argorant
 
-Overview note: 196 words.
+Overview note: 202 words.

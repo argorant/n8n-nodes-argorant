@@ -18,7 +18,7 @@ When a HubSpot deal moves to Closed won, the workflow reads the deal's contacts 
 Add HubSpot and Argorant credentials, check the stage name and the domain switch in Settings, activate.
 
 ### Requirements
-n8n-nodes-argorant 0.3.0 or later, an Argorant API key, a HubSpot app token credential used by the HubSpot Trigger and HTTP Request nodes.
+n8n-nodes-argorant 0.3.0 or later, an Argorant API key, a HubSpot developer app (for the HubSpot Trigger) and a HubSpot private app token with read access to deals and contacts.
 
 ### Costs
 Free: blocking uses no credits.
@@ -26,4 +26,4 @@ Free: blocking uses no credits.
 ### Community node
 This template uses the Argorant community node `n8n-nodes-argorant` (version 0.3.0). On n8n Cloud and self-hosted n8n: Settings > Community nodes > Install > `n8n-nodes-argorant`. Guide: https://github.com/argorant/n8n-nodes-argorant
 
-Overview note: 178 words.
+Overview note: 192 words.

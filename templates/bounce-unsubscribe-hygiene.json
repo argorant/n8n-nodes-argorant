@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Block bounced and opted-out addresses everywhere and flag them in HubSpot\n\n### How it works\nOne bounce or opt-out should count everywhere. Argorant already stops the campaign that bounced or got the opt-out. This workflow goes further: it blocks the address for every campaign of your workspace, flags the contact in HubSpot with a custom property (bounced or unsubscribed), and appends a row to a log sheet with the date, address, reason and campaign, so you can review deliverability.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. In HubSpot, create a contact property with the internal name argorant_status (single line text). Add a HubSpot credential.\n5. Create a sheet with the columns date, email, reason, campaign_id and pick it in **Log the event**.\n\n### Customization\nBlock the whole domain for hard bounces, or skip the CRM step.",
-        "height": 609,
+        "content": "## Block bounced and opted-out addresses everywhere and flag them in HubSpot\n\n### How it works\nOne bounce or opt-out should count everywhere. Argorant already stops the campaign that bounced or got the opt-out. This workflow goes further: it blocks the address for every campaign of your workspace, flags the contact in HubSpot with a custom property (bounced or unsubscribed), and appends a row to a log sheet with the date, address, reason and campaign, so you can review deliverability.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. In HubSpot, create a contact property with the internal name argorant_status (single line text). Add a HubSpot App Token credential (private app, contacts write).\n5. Create a sheet with the columns date, email, reason, campaign_id and pick it in **Log the event**.\n\n### Customization\nBlock the whole domain for hard bounces, or skip the CRM step.",
+        "height": 626,
         "width": 520,
         "color": 1
       },
@@ -120,6 +120,7 @@
     },
     {
       "parameters": {
+        "authentication": "appToken",
         "resource": "contact",
         "operation": "upsert",
         "email": "={{ $('Reason').item.json.email }}",
