@@ -1,0 +1,290 @@
+{
+  "name": "Check every email address in a Google Sheet and write the result next to it",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Check every email address in a Google Sheet and write the result next to it\n\n### How it works\nClean a list before it costs you your sender reputation. The sheet has an email column and an empty result column. Each run reads the rows without a result, checks at most max_checks addresses with Argorant and writes the result back: valid, invalid, catch_all (the domain accepts every address), risky or unknown, plus send yes or no. Run it again to continue with the next rows.\n\nCosts: half a credit per fresh check; recent checks are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns email, result, send and pick it in both Google Sheets nodes.\n4. Set max_checks in **Settings** and click Execute workflow.\n\n### Customization\nTreat catch_all as send yes if your campaigns accept them.",
+        "height": 558,
+        "width": 520,
+        "color": 1
+      },
+      "id": "07a76018-6dd1-41b4-8552-4908eaba966a",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check\nHalf a credit per fresh check, at most max_checks per run.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "ddeb7296-b322-4e25-b6a5-0b3c040a69aa",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Write back\nResult and a send recommendation per row.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "c89ec013-78d6-4dce-9d29-50e00c8e7207",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "83663b34-e73f-4224-ab87-65bab45d3d07",
+      "name": "Clean the list",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e70f2217-0124-4546-8270-718dfa90c761",
+              "name": "max_checks",
+              "value": "200",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7f40b58b-b699-49fb-8b04-b9de51ff3450",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "result",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "65da3a90-01e2-4e0c-a4a2-38141aa106c8",
+      "name": "Rows without a result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_checks }}"
+      },
+      "id": "79d089da-9154-4887-838d-67973e8f981b",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.email }}"
+      },
+      "id": "b3268f78-2d7b-40fa-a420-b3f7394a0b98",
+      "name": "Check the address",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a161879-506c-4fd3-80e4-8b096b7f63e2",
+              "name": "row_number",
+              "value": "={{ $('Cap per run').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "b7d5ed95-6d66-4e10-9d1c-8eb366859825",
+              "name": "result",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "db06d30c-4a57-4d85-a722-97c4beb6c9e2",
+              "name": "send",
+              "value": "={{ $json.status === 'valid' ? 'yes' : 'no' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32694405-89fa-4a61-9515-856de4386013",
+      "name": "Row result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "0cc99205-5420-42e0-a58e-d79d13eed96c",
+      "name": "Write the result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Clean the list": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Rows without a result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows without a result": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Check the address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the address": {
+      "main": [
+        [
+          {
+            "node": "Row result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row result": {
+      "main": [
+        [
+          {
+            "node": "Write the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

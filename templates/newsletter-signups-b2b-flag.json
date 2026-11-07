@@ -1,0 +1,254 @@
+{
+  "name": "Flag decision makers among newsletter signups and add them to a nurture campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Flag decision makers among newsletter signups and add them to a nurture campaign\n\n### How it works\nFind the buyers on your list while they still remember you. The form takes first name and work email. Argorant looks up the person behind each address and returns title, seniority and company. Decision makers (owners, founders, partners, C-level, VPs, directors) are posted to Slack with their title and company and join your nurture campaign with their first name and company as variables. Other signups get nothing extra. Connect the form to your newsletter tool with one more node if you like.\n\nCosts: 1 credit per signup found; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Slack credential and channel to **Tell sales**.\n4. Pick the nurture campaign in **Add to nurture campaign**.\n5. Activate and share the production URL of **Newsletter signup**.\n\n### Customization\nChange the seniority list in **Decision maker?**, or send the flag by email.",
+        "height": 636,
+        "width": 520,
+        "color": 1
+      },
+      "id": "aba1f25e-91ae-4c7b-91ea-c08aeca96672",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Who signed up\n1 credit per signup found with a passing email.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "5475b5d4-d8c3-4f4b-a716-dd153e0e2dec",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Decision makers\nSales hears about them; the nurture campaign adds them for free.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "67bd97c4-b308-4c01-b818-cff3c237fe59",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Get the newsletter",
+        "formDescription": "One useful email a month.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "First name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work email",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a432c044-eb8b-4d32-8460-f3faba45c9ed",
+      "name": "Newsletter signup",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2e0583e8-cf19-48b8-9b99-673b2e13bd2d"
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json['Work email'] }}",
+        "simplify": true
+      },
+      "id": "3e0e5a12-cbd9-43e7-9cfc-4c8c4c814617",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d945f37e-6303-4afb-ab35-ee4922e8d8fa",
+              "leftValue": "={{ $json.found }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "0e53b352-8eb7-4d16-bea6-98f6b6f35261",
+              "leftValue": "={{ 'C-Level,VP,Director,Owner,Founder,Partner'.split(',').includes($json.seniority) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "52961c8d-ff5c-4c87-bdba-f5152517e667",
+      "name": "Decision maker?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Newsletter signup worth a look: {{ $json.full_name }}, {{ $json.title }} at {{ $json.company }} ({{ $('Newsletter signup').item.json['Work email'] }})",
+        "otherOptions": {}
+      },
+      "id": "742ea086-769a-46b0-b867-f00703180088",
+      "name": "Tell sales",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $('Newsletter signup').item.json['Work email'] }}",
+        "leadFields": {
+          "first_name": "={{ $('Newsletter signup').item.json['First name'] }}",
+          "company": "={{ $('Find the person').item.json.company }}",
+          "title": "={{ $('Find the person').item.json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "source",
+              "value": "newsletter"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "77dd5e54-ac0d-4f0e-8f98-c371df20ed20",
+      "name": "Add to nurture campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Newsletter signup": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Decision maker?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision maker?": {
+      "main": [
+        [
+          {
+            "node": "Tell sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell sales": {
+      "main": [
+        [
+          {
+            "node": "Add to nurture campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

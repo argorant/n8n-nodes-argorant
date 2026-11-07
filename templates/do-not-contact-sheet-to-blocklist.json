@@ -1,0 +1,295 @@
+{
+  "name": "Sync a do-not-contact sheet to the Argorant blocklist every day",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Sync a do-not-contact sheet to the Argorant blocklist every day\n\n### How it works\nOne list everybody can edit, enforced in every campaign. Anyone with access adds an email address or a domain to the sheet, with a reason if they like. Every morning the workflow reads the rows that are not synced yet (at most max_per_run), adds each value to the Argorant blocklist, which also stops people already in running campaigns, and marks the row synced with the date. Blocked entries apply to the whole workspace.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns value, reason, synced and pick it in both Google Sheets nodes.\n4. Set max_per_run in **Settings** and activate.\n\n### Customization\nRun it every hour, or post the number of new blocks to your team chat.",
+        "height": 558,
+        "width": 520,
+        "color": 1
+      },
+      "id": "0433bfb4-abdc-4e2f-ab8c-804ea0d83fb6",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## New rows\nRows without a synced date, at most max_per_run.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "86b7faa7-6947-4b6f-8294-3da42a3f20ca",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Block and mark\nThe blocklist applies to every campaign of the workspace.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "18bbc2be-f3e2-4338-b3df-11c850aedea8",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "661f27d5-8d9b-4556-a22d-5e0e010095d0",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "93eeca8f-eadd-483b-ad99-0768db0eb631",
+              "name": "max_per_run",
+              "value": "500",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3f55c441-5fe8-4f18-85f3-58364c5d2253",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "synced",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "42f15157-61bd-4a00-9f99-a31a86fb2655",
+      "name": "New entries",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_per_run }}"
+      },
+      "id": "1573a02a-159a-4cd8-a24e-f65c5d430be0",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "blocklist",
+        "operation": "add",
+        "value": "={{ String($json.value).trim() }}",
+        "reason": "={{ $json.reason || 'do-not-contact sheet' }}"
+      },
+      "id": "848e8f24-4094-4ce0-970a-4c7b2550c0e9",
+      "name": "Block in Argorant",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e87fa2a9-c901-4b68-a6e5-84874f733587",
+              "name": "row_number",
+              "value": "={{ $('Cap per run').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "da6b6011-237c-42fa-bdce-e26ef4fdbd30",
+              "name": "synced",
+              "value": "={{ $json.ok ? $now.toISODate() : 'error: ' + ($json.error || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8e4c5052-7ad5-4f39-b7ca-e9cc080653d1",
+      "name": "Row synced",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "5bde9b7f-b059-4bcd-9f16-2821beb3d3a2",
+      "name": "Mark synced",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "New entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New entries": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Block in Argorant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block in Argorant": {
+      "main": [
+        [
+          {
+            "node": "Row synced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row synced": {
+      "main": [
+        [
+          {
+            "node": "Mark synced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

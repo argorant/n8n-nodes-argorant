@@ -1,0 +1,290 @@
+{
+  "name": "Call interested prospects: get their phone number and post a call task to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Call interested prospects: get their phone number and post a call task to Slack\n\n### How it works\nStrike while the reply is warm. When a reply is labeled Interested or Meeting request, the workflow looks up the person behind the email in Argorant, then asks for their direct or mobile number. With a number, Slack gets a call task: name, title, company, a tel: link and the first lines of the reply. Without one, Slack gets a short note to answer by email instead. Phone numbers come with the Pro plan.\n\nCosts: 10 credits per number returned, free when none is found or you already have it; the person lookup costs 1 credit per match.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Add a Slack credential and pick the channel in both Slack nodes.\n\n### Customization\nCreate a task in your CRM instead of a Slack message, or call only for one campaign with the trigger's Campaign option.",
+        "height": 636,
+        "width": 520,
+        "color": 1
+      },
+      "id": "7164df14-52c8-427d-976b-92222232b2d4",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find the number\n10 credits per number returned; none found costs nothing.",
+        "height": 380,
+        "width": 940,
+        "color": 7
+      },
+      "id": "1a1f1239-8969-4631-bd56-e57c8fb15080",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Tell the caller\nA tap-to-call task, or a note to answer by email.",
+        "height": 520,
+        "width": 260,
+        "color": 7
+      },
+      "id": "1f73f189-bff9-4d79-8883-5bf5edd94242",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "b680d329-f3c0-4878-b167-191201dd917b",
+      "name": "Interested reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f522d2a0-a4da-40a7-80c5-5ada75b59bb5"
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.lead_email }}",
+        "simplify": true
+      },
+      "id": "dad02612-3787-4f28-9ce7-94046fd439e3",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bbdfd6c2-93ab-4d86-831f-706da4011e41",
+              "leftValue": "={{ $json.record_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b420f60b-5b96-40cd-9b35-2fdbcd5ca734",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "getPhones",
+        "recordIds": "={{ $json.record_id }}"
+      },
+      "id": "6a025a58-9168-48fa-a490-60daa675f14b",
+      "name": "Get the phone number",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2fac0bcb-343c-428e-a328-f64e2810ad7d",
+              "leftValue": "={{ $json.phone }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1b0f78f4-9b4e-4b70-8bdd-d87769892e1c",
+      "name": "Has a number?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:telephone_receiver: Call {{ $('Find the person').item.json.full_name }} ({{ $('Find the person').item.json.title }}, {{ $('Find the person').item.json.company }}): <tel:{{ $json.phone }}|{{ $json.phone }}>\nThey replied: {{ $('Interested reply').item.json.snippet }}",
+        "otherOptions": {}
+      },
+      "id": "3496c719-002e-4710-b7df-841940b3de15",
+      "name": "Post the call task",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Interested reply from {{ $('Interested reply').item.json.lead_email }}, no phone number on record. Answer by email: {{ $('Interested reply').item.json.snippet }}",
+        "otherOptions": {}
+      },
+      "id": "d144765f-87e9-4dbd-8885-3c353029315a",
+      "name": "Post answer by email",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        40
+      ]
+    }
+  ],
+  "connections": {
+    "Interested reply": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [
+          {
+            "node": "Get the phone number",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post answer by email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the phone number": {
+      "main": [
+        [
+          {
+            "node": "Has a number?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a number?": {
+      "main": [
+        [
+          {
+            "node": "Post the call task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post answer by email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
