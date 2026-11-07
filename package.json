@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-argorant",
-  "version": "0.2.0",
-  "description": "n8n node for Argorant: find leads, check every email, build lists and campaigns, and read replies in your workflows or from an AI agent.",
+  "version": "0.3.0",
+  "description": "n8n nodes for Argorant, the whole outbound workflow: find leads, check every email, build lists, write and launch campaigns, and handle replies, in workflows or from an AI agent.",
   "license": "MIT",
   "homepage": "https://argorant.com",
   "keywords": [
@@ -10,10 +10,14 @@
     "argorant",
     "leads",
     "b2b",
+    "lead-generation",
     "email-finder",
     "email-verification",
     "cold-email",
-    "sales"
+    "outbound",
+    "sales",
+    "campaigns",
+    "ai-agent"
   ],
   "author": {
     "name": "Argorant",
@@ -34,7 +38,8 @@
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "release": "n8n-node release",
-    "prepublishOnly": "n8n-node prerelease"
+    "prepublishOnly": "n8n-node prerelease",
+    "test": "npm run build && node --test test/*.test.js"
   },
   "files": [
     "dist"
@@ -46,7 +51,8 @@
       "dist/credentials/ArgorantApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Argorant/Argorant.node.js"
+      "dist/nodes/Argorant/Argorant.node.js",
+      "dist/nodes/ArgorantTrigger/ArgorantTrigger.node.js"
     ]
   },
   "devDependencies": {

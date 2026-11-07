@@ -1,11 +1,22 @@
-import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
-import { campaignDescription } from './resources/campaign';
-import { emailDescription } from './resources/email';
-import { leadDescription } from './resources/lead';
-import { listDescription } from './resources/list';
-import { replyDescription } from './resources/reply';
-import { searchCampaigns } from './listSearch/searchCampaigns';
-import { searchLists } from './listSearch/searchLists';
+import type { IExecuteFunctions, INodeExecutionData, INodeType, INodeTypeDescription } from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
+import { route } from './actions/router';
+import { campaignDescription } from './descriptions/campaign';
+import { exportDescription } from './descriptions/export';
+import { accountDescription, companyDescription, emailDescription, leadDescription } from './descriptions/lead';
+import { listDescription } from './descriptions/list';
+import { blocklistDescription, mailboxDescription, replyDescription } from './descriptions/reply';
+import {
+	getCampaignTags,
+	getCountries,
+	getIndustries,
+	getMailboxes,
+	getReplyStatuses,
+	searchCampaigns,
+	searchLists,
+	searchMailboxes,
+	searchSavedSearches,
+} from './methods';
 
 export class Argorant implements INodeType {
 	description: INodeTypeDescription = {
@@ -15,7 +26,8 @@ export class Argorant implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Find leads, check emails, build lists and campaigns, and read replies in Argorant',
+		description:
+			'Find leads, check every email, build lists, write and launch campaigns, and handle replies in Argorant',
 		defaults: {
 			name: 'Argorant',
 		},
@@ -28,13 +40,6 @@ export class Argorant implements INodeType {
 				required: true,
 			},
 		],
-		requestDefaults: {
-			baseURL: 'https://app.argorant.com',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-			},
-		},
 		properties: [
 			{
 				displayName: 'Resource',
@@ -42,18 +47,28 @@ export class Argorant implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{ name: 'Campaign', value: 'campaign' },
-					{ name: 'Email', value: 'email' },
-					{ name: 'Lead', value: 'lead' },
-					{ name: 'List', value: 'list' },
-					{ name: 'Reply', value: 'reply' },
+					{ name: 'Account', value: 'account', description: 'Credits, plan and limits' },
+					{ name: 'Blocklist', value: 'blocklist', description: 'Addresses and domains never to email' },
+					{ name: 'Campaign', value: 'campaign', description: 'Create, fill, launch and track campaigns' },
+					{ name: 'Company', value: 'company', description: 'Count, search and look up companies' },
+					{ name: 'Email', value: 'email', description: 'Find a work email or check an address' },
+					{ name: 'Export', value: 'export', description: 'CSV files of checked contacts' },
+					{ name: 'Lead', value: 'lead', description: 'Count, search, reveal and enrich people' },
+					{ name: 'List', value: 'list', description: 'Saved lists and saved searches' },
+					{ name: 'Mailbox', value: 'mailbox', description: 'The mailboxes your campaigns send from' },
+					{ name: 'Reply', value: 'reply', description: 'Replies across your campaigns' },
 				],
 				default: 'lead',
 			},
+			...accountDescription,
+			...blocklistDescription,
 			...campaignDescription,
+			...companyDescription,
 			...emailDescription,
+			...exportDescription,
 			...leadDescription,
 			...listDescription,
+			...mailboxDescription,
 			...replyDescription,
 		],
 	};
@@ -62,6 +77,19 @@ export class Argorant implements INodeType {
 		listSearch: {
 			searchCampaigns,
 			searchLists,
+			searchMailboxes,
+			searchSavedSearches,
+		},
+		loadOptions: {
+			getCampaignTags,
+			getCountries,
+			getIndustries,
+			getMailboxes,
+			getReplyStatuses,
 		},
 	};
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		return await route.call(this);
+	}
 }

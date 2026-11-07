@@ -25,7 +25,7 @@ export class ArgorantApi implements ICredentialType {
 			default: '',
 			placeholder: 'ag_live_...',
 			description:
-				'Your Argorant API key. Create one in the Argorant app under Profile, API keys.',
+				'Your Argorant API key. Create one in Argorant under Settings, API keys (app.argorant.com/settings?section=api-keys).',
 		},
 	];
 
