@@ -1,0 +1,332 @@
+{
+  "name": "Add Pipedrive people with an Outbound label to an Argorant campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Add Pipedrive people with an Outbound label to an Argorant campaign\n\n### How it works\nPlan in Pipedrive, send from Argorant. The Pipedrive Trigger fires when a person changes. If the person carries the label you set (for example Outbound), the workflow checks the primary email with Argorant. A valid address joins your campaign with first name, last name and organization as variables, and a note on the Pipedrive person says when and where it was added. Invalid addresses get a note too, so your team can fix them.\n\nCosts: half a credit per fresh email check.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Pipedrive credential to **Person updated** and both note nodes.\n4. In **Settings**, set label_id to the ID of your Outbound label (Pipedrive: Settings, Labels).\n5. Pick the campaign in **Add to campaign** and activate.\n\n### Customization\nUse a custom field instead of a label, or add organizations by domain.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "31776ddd-d55d-4998-86a2-70dcf0aed84a",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Select\nOnly people with the label in Settings and a primary email go on.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "a82c3a5f-c6b6-4603-9082-2969cb218dfb",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check, add, record\nValid emails join the campaign. A note on the person records the result.",
+        "height": 500,
+        "width": 940,
+        "color": 7
+      },
+      "id": "d90444ef-62dc-48e0-9ea5-d9270bcef24a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "action": "change",
+        "entity": "person"
+      },
+      "id": "0b3e6330-7c01-4a1f-9891-94bcbbcefa15",
+      "name": "Person updated",
+      "type": "n8n-nodes-base.pipedriveTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "33be18b3-bf76-46bf-843b-41a1f86f4f91"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d10fae85-ab3b-48a4-990e-e332049a4031",
+              "name": "label_id",
+              "value": "7",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "76fb8e79-4083-44b8-a9da-f2a2b06c5d9b",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "15a3fc5d-a811-4955-bff2-74a273dafc82",
+              "leftValue": "={{ ($json.data.label_ids || []).map(Number).includes(Number($json.label_id)) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "0c410d2c-7a3a-4d84-acd7-8376a21bf05c",
+              "leftValue": "={{ ($json.data.emails || []).find(e => e.primary)?.value || '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2bf94244-0b90-431d-bdd9-a2d21dcd516f",
+      "name": "Has the Outbound label?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.data.emails.find(e => e.primary).value }}"
+      },
+      "id": "4d41b074-0cc9-4217-88b7-c36bd0ce90e5",
+      "name": "Check the email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fa48dc6d-c3c5-4d87-8cd4-ea5873e07cd7",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d7d64d80-e0cd-4d6c-8584-bd73225284ba",
+      "name": "Valid email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('Person updated').item.json.data.first_name }}",
+          "last_name": "={{ $('Person updated').item.json.data.last_name }}",
+          "company": "={{ $('Person updated').item.json.data.org_name }}"
+        },
+        "extraColumns": {},
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "56f2b256-2808-4fe0-b106-25a95f291eac",
+      "name": "Add to campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "note",
+        "operation": "create",
+        "content": "=Added to Argorant campaign on {{ $now.toISODate() }}.",
+        "additionalFields": {
+          "person_id": "={{ $('Person updated').item.json.data.id }}"
+        }
+      },
+      "id": "eb4a6f71-b7e2-4d48-b725-fccfc9b48f30",
+      "name": "Note: added",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "note",
+        "operation": "create",
+        "content": "=Not added to Argorant: the email check said {{ $json.status }}.",
+        "additionalFields": {
+          "person_id": "={{ $('Person updated').item.json.data.id }}"
+        }
+      },
+      "id": "827fe80d-dd2e-41d1-a067-ef0ac4ed4dda",
+      "name": "Note: email not valid",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Person updated": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Has the Outbound label?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has the Outbound label?": {
+      "main": [
+        [
+          {
+            "node": "Check the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the email": {
+      "main": [
+        [
+          {
+            "node": "Valid email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid email?": {
+      "main": [
+        [
+          {
+            "node": "Add to campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Note: email not valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to campaign": {
+      "main": [
+        [
+          {
+            "node": "Note: added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

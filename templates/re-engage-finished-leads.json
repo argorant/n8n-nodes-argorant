@@ -1,0 +1,301 @@
+{
+  "name": "Re-engage people who finished a campaign months ago without replying",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Re-engage people who finished a campaign months ago without replying\n\n### How it works\nSilence today is not a no forever. Once a month the workflow reads the people who finished your old campaign without a reply (status completed), keeps those whose last email is older than min_days_quiet, and adds at most max_per_run of them to your re-engagement campaign. Each person carries {{previous_campaign}}, so the new message can open with a fresh angle. People who replied, bounced, unsubscribed or are blocked are never added again, and every address is checked once more before it joins.\n\nPeople already in your account cost no credits.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick the old campaign in **Finished without a reply** and the new one in **Add to re-engagement campaign**.\n4. Set min_days_quiet and max_per_run in **Settings**, then activate.\n\n### Customization\nRun it on several old campaigns by duplicating the first Argorant node.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "aa4ca66a-0d8c-4ad0-9550-e658a2555834",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick the quiet ones\nCompleted, no reply, and quiet for longer than min_days_quiet.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "26b1393c-e5e1-4dd9-a7ac-cfa686177842",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Second chance\nAt most max_per_run people a month join the new campaign.",
+        "height": 440,
+        "width": 460,
+        "color": 7
+      },
+      "id": "80248dd2-323e-4091-b12e-df51d0acc156",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "c7381b31-ca6e-4cc3-8e44-cafc17adc0c1",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e47bd9c-c0af-4001-b494-4491b5549e0f",
+              "name": "min_days_quiet",
+              "value": "90",
+              "type": "number"
+            },
+            {
+              "id": "5b6a3366-2bb8-4fe0-8404-a989322dc7d3",
+              "name": "max_per_run",
+              "value": "200",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cad268d6-6c22-4e28-9c6c-ae292115bca6",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadFilters": {
+          "status": "completed"
+        },
+        "returnAll": true,
+        "simplify": true
+      },
+      "id": "12164fc4-680a-49a3-bbe0-6ce3c724ca5a",
+      "name": "Finished without a reply",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "662c83da-d4a9-4271-82d7-421a9570a41f",
+              "leftValue": "={{ $json.last_sent_at }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              },
+              "rightValue": "={{ $now.minus({ days: $('Settings').first().json.min_days_quiet }).toISO() }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6cdb3254-bd0e-4d6b-9c62-ca18102d7942",
+      "name": "Quiet long enough",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_per_run }}"
+      },
+      "id": "56ca1b92-de9b-4427-90b3-e97d0b0c2f97",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "get",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Finished without a reply').params.campaignId.value }}"
+        },
+        "simplify": true
+      },
+      "id": "2c96ff9f-4b01-49cd-adad-7c4f8c04945a",
+      "name": "Get the old campaign name",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -160
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $('Cap per run').item.json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('Cap per run').item.json.first_name }}",
+          "last_name": "={{ $('Cap per run').item.json.last_name }}",
+          "company": "={{ $('Cap per run').item.json.company }}",
+          "title": "={{ $('Cap per run').item.json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "previous_campaign",
+              "value": "={{ $('Get the old campaign name').first().json.name }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "c3ca069b-adbc-4447-9a93-8b017ba66aa1",
+      "name": "Add to re-engagement campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Finished without a reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finished without a reply": {
+      "main": [
+        [
+          {
+            "node": "Quiet long enough",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiet long enough": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Add to re-engagement campaign",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get the old campaign name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

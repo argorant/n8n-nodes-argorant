@@ -1,0 +1,449 @@
+{
+  "name": "Freight forwarders and 3PL: size supply chain buyers by country and save the best markets",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Freight forwarders and 3PL: size supply chain buyers by country and save the best markets\n\n### How it works\nDecide where to prospect with numbers, before you spend anything. Settings hold your candidate countries, the buyer titles and how many top markets to keep. The workflow counts, per country, the supply chain, logistics and procurement leaders at wholesale, manufacturing and e-commerce companies. It ranks the countries by the number of buyers, saves the top_n markets as Argorant lists named after the country, and appends the full table with the list links to your sheet. Counting runs one country at a time to respect rate limits.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Edit **Settings**: countries (comma separated), titles and top_n.\n4. Create a sheet with the columns date, country, buyers, rank, list_url and pick it in **Write the market table**.\n5. Click Execute workflow.\n\n### Customization\nSwap the industries in the count and list nodes for your niche, such as food production.",
+        "height": 670,
+        "width": 520,
+        "color": 1
+      },
+      "id": "cae410ac-b14a-4985-a056-e2bf69fbdc1e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Count\nOne free count per country with the same buyer filters.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "b2077d0d-41d5-4910-b288-12a881aba042",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Keep the best\nTop markets become lists; every country lands in the sheet.",
+        "height": 500,
+        "width": 940,
+        "color": 7
+      },
+      "id": "e59779b0-8051-4a84-b20b-914b3423cbb3",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "f1defa27-0b42-4635-9aa5-025c01bd0180",
+      "name": "Run the sizing",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af614585-0bf2-41dc-a0d8-ee4af5908f71",
+              "name": "countries",
+              "value": "Germany, Netherlands, Poland, Spain",
+              "type": "string"
+            },
+            {
+              "id": "e5d7ff07-cc93-4f3b-a7dc-f1e2b2bb672b",
+              "name": "titles",
+              "value": "Head of Supply Chain, Logistics Manager, Head of Procurement, COO",
+              "type": "string"
+            },
+            {
+              "id": "5ffb1024-049b-4816-aa0c-f000ce9a3bc5",
+              "name": "top_n",
+              "value": "2",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "14b943ea-deb1-45df-aa4a-86c1b03055e1",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json;\nreturn s.countries.split(',').map(c => ({ json: { country: c.trim(), titles: s.titles } })).filter(i => i.json.country);"
+      },
+      "id": "987cd1ca-ca0f-446a-8026-9a30b9964697",
+      "name": "One item per country",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $json.titles }}",
+          "country": "={{ [$json.country] }}",
+          "industries": [
+            "Wholesale",
+            "Manufacturing",
+            "E-commerce"
+          ]
+        }
+      },
+      "id": "0b1556e1-20d4-43c8-96b3-8c65e3cb6850",
+      "name": "Count buyers per country",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const top = $('Settings').first().json.top_n;\nconst rows = $input.all().map((i, k) => ({ country: $('One item per country').all()[k].json.country, titles: $('One item per country').all()[k].json.titles, buyers: Number(i.json.count || 0) }));\nrows.sort((a, b) => b.buyers - a.buyers);\nreturn rows.map((r, k) => ({ json: { ...r, rank: k + 1, top: k < top } }));"
+      },
+      "id": "5f5db3e2-c600-4efa-a2b6-f4b5df46f858",
+      "name": "Rank the countries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bbe1f8f8-57e9-48fe-8b55-8c1125eacb63",
+              "leftValue": "={{ $json.top }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b3558e05-c749-4c70-a26a-9770c48d7518",
+      "name": "Top markets",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Supply chain buyers, {{ $json.country }}",
+        "peopleSource": "filters",
+        "filters": {
+          "title": "={{ $json.titles }}",
+          "country": "={{ [$json.country] }}",
+          "industries": [
+            "Wholesale",
+            "Manufacturing",
+            "E-commerce"
+          ]
+        },
+        "simplify": true
+      },
+      "id": "da8f8e22-aa4e-463e-9599-a6b17d0bfe22",
+      "name": "Save the market as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0b7d1c0-4b98-4508-aaf6-c515f05d80d1",
+              "name": "date",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "10519bc1-094c-4a0e-b7c4-fe000ca38332",
+              "name": "country",
+              "value": "={{ $('Top markets').item.json.country }}",
+              "type": "string"
+            },
+            {
+              "id": "2763e732-a587-4e6a-b505-6621e5a58be9",
+              "name": "buyers",
+              "value": "={{ $('Top markets').item.json.buyers }}",
+              "type": "number"
+            },
+            {
+              "id": "d3d08d8f-a76d-4847-a059-9d4aefafa704",
+              "name": "rank",
+              "value": "={{ $('Top markets').item.json.rank }}",
+              "type": "number"
+            },
+            {
+              "id": "47e2d5d6-8a5c-4187-9218-19e43197780a",
+              "name": "list_url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2bf2259c-2df2-40c6-bafa-a234135444f6",
+      "name": "Row with list",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c650d8b-2f45-4bf2-acd4-c414dae40044",
+              "name": "date",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "44d01c50-6e18-441e-a0a7-95962e9c95a0",
+              "name": "country",
+              "value": "={{ $json.country }}",
+              "type": "string"
+            },
+            {
+              "id": "4b37d965-873c-44f9-ab20-7c6703642427",
+              "name": "buyers",
+              "value": "={{ $json.buyers }}",
+              "type": "number"
+            },
+            {
+              "id": "89e85c05-fc0f-4b78-8602-7c0c4f37bd39",
+              "name": "rank",
+              "value": "={{ $json.rank }}",
+              "type": "number"
+            },
+            {
+              "id": "4de7de92-48e3-4a31-82e9-3e839952ca6a",
+              "name": "list_url",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8bf341d2-f4cf-4932-bfb4-e29ad09faf4d",
+      "name": "Row without list",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "868ee73d-f85b-418c-9807-d737a8a4251e",
+      "name": "Write the market table",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run the sizing": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "One item per country",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per country": {
+      "main": [
+        [
+          {
+            "node": "Count buyers per country",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count buyers per country": {
+      "main": [
+        [
+          {
+            "node": "Rank the countries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank the countries": {
+      "main": [
+        [
+          {
+            "node": "Top markets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Top markets": {
+      "main": [
+        [
+          {
+            "node": "Save the market as a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Row without list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the market as a list": {
+      "main": [
+        [
+          {
+            "node": "Row with list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row with list": {
+      "main": [
+        [
+          {
+            "node": "Write the market table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row without list": {
+      "main": [
+        [
+          {
+            "node": "Write the market table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

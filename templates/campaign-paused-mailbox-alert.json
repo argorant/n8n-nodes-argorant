@@ -1,0 +1,227 @@
+{
+  "name": "Alert the team in Slack when a campaign pauses, with the mailboxes to fix",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Alert the team in Slack when a campaign pauses, with the mailboxes to fix\n\n### How it works\nKnow at once when sending stops, and why. Argorant pauses a campaign by itself when bounces are high, when its mailboxes are offline, or when the plan's campaign emails for the month are used up. The trigger catches the pause and the resume. On a pause, the workflow reads the mailboxes that need attention, are not connected or are paused, and posts the reason with that list to Slack. On a resume, it posts a short all clear.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Add a Slack credential and pick the channel in both Slack nodes.\n\n### Customization\nMention an on-call person in the text, or open a ticket instead of a message.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "7b1e8a3b-9c72-479d-88b8-e8661c07de09",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pause\nThe reason plus every mailbox that needs attention.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "be0be28f-b4c2-42f5-9d46-ed020bd8f10a",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "campaign.paused",
+          "campaign.resumed"
+        ],
+        "options": {}
+      },
+      "id": "b7480554-0b79-4e16-960c-4b6b2e3293c6",
+      "name": "Campaign paused or resumed",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "dbfe4135-6cd1-47d9-bb8e-a904ad5ea707"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4513276c-20ba-49ca-809c-2b3d75e963b6",
+              "leftValue": "={{ $json.event }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "campaign.paused"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b090edd0-d3fc-4419-8e5b-9a5e4ffd14f3",
+      "name": "Paused?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "mailbox",
+        "operation": "getMany",
+        "mailboxFilters": {
+          "status": [
+            "needs_attention",
+            "not_connected",
+            "paused"
+          ]
+        },
+        "returnAll": false,
+        "limit": 50,
+        "simplify": true
+      },
+      "id": "12ce2ac5-3fe4-4fc3-a5de-78f15d3d3419",
+      "name": "Mailboxes to fix",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -100
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const evt = $('Campaign paused or resumed').first().json;\nconst boxes = $input.all().map(i => i.json).filter(m => m.email);\nconst list = boxes.length ? boxes.map(m => `- ${m.email}: ${m.status_label || m.status}`).join('\\n') : 'No mailbox is flagged right now.';\nreturn [{ json: { text: `:warning: *${evt.campaign_name || 'A campaign'} paused*\\n${evt.message || evt.reason || ''}\\n\\n*Mailboxes to check*\\n${list}\\n\\n${evt.url || 'https://app.argorant.com/campaigns'}` } }];"
+      },
+      "id": "89c596ad-b7d6-44ab-a07d-7e402c4d139f",
+      "name": "Build the alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "8246ba6c-804b-4a24-bc24-06ba8e910c3e",
+      "name": "Post the alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:white_check_mark: {{ $json.campaign_name || 'A campaign' }} sends again. {{ $json.message || '' }}",
+        "otherOptions": {}
+      },
+      "id": "18557d19-037c-40ed-91d3-96e86ed347a0",
+      "name": "Post the all clear",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Campaign paused or resumed": {
+      "main": [
+        [
+          {
+            "node": "Paused?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paused?": {
+      "main": [
+        [
+          {
+            "node": "Mailboxes to fix",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post the all clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailboxes to fix": {
+      "main": [
+        [
+          {
+            "node": "Build the alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the alert": {
+      "main": [
+        [
+          {
+            "node": "Post the alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

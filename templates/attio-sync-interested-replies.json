@@ -1,0 +1,157 @@
+{
+  "name": "Add interested repliers to Attio with a note",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Add interested repliers to Attio with a note\n\n### How it works\nInterested prospects belong in your CRM at once. When a reply is labeled Interested or Meeting request, the workflow upserts the company in Attio by the email domain and the person by email address (Attio matches existing records, so repeats update them), links the person to the company, then adds a note with the reply text, the subject and the campaign name. Attio has no built-in n8n node yet, so this template calls the Attio REST API with the HTTP Request node.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. In Attio, create an access token (Workspace settings, Developers) with read and write access to records and notes.\n5. In the three HTTP Request nodes, use one Header Auth credential: name Authorization, value Bearer followed by your token.\n\n### Customization\nPut the person into an Attio list, or create a deal for interested people.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "ea2764c4-91a5-4770-aae4-a3c7fab4fccb",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Sync to Attio\nCompany by domain, person by email, linked. Repeats update the same records.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "78fc5a0d-8efd-41dd-b980-f78b307949df",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "05b44d1a-8ed5-4f35-9e9c-df53ab9ed8f2",
+      "name": "Interested reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "be544744-a555-4387-becc-d4fd29f6c401"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.attio.com/v2/objects/companies/records?matching_attribute=domains",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ data: { values: { domains: [$json.lead_email.split('@')[1]] } } }) }}",
+        "options": {}
+      },
+      "id": "4957269f-e6e2-47b9-bffa-8c000d2e9d6f",
+      "name": "Upsert the company in Attio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.attio.com/v2/objects/people/records?matching_attribute=email_addresses",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ data: { values: { email_addresses: [$('Interested reply').item.json.lead_email], company: [{ target_object: 'companies', target_record_id: $json.data.id.record_id }] } } }) }}",
+        "options": {}
+      },
+      "id": "1140d9a9-64f7-4025-afe0-7d5f530087df",
+      "name": "Upsert the person in Attio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.attio.com/v2/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ data: { parent_object: 'people', parent_record_id: $json.data.id.record_id, title: 'Interested reply: ' + $('Interested reply').item.json.subject, format: 'plaintext', content: $('Interested reply').item.json.snippet + '\\n\\nCampaign: ' + ($('Interested reply').item.json.campaign_name || $('Interested reply').item.json.campaign_id) } }) }}",
+        "options": {}
+      },
+      "id": "764be36a-4ce2-4039-adbf-862c03de0a04",
+      "name": "Add a note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Interested reply": {
+      "main": [
+        [
+          {
+            "node": "Upsert the company in Attio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert the company in Attio": {
+      "main": [
+        [
+          {
+            "node": "Upsert the person in Attio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert the person in Attio": {
+      "main": [
+        [
+          {
+            "node": "Add a note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

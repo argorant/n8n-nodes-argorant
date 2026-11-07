@@ -1,0 +1,191 @@
+{
+  "name": "Email every campaign reply to the owner of that campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Email every campaign reply to the owner of that campaign\n\n### How it works\nSend each reply to the person who owns the campaign. When a reply arrives (new or marked Interested), the workflow reads the campaign, takes its tags and matches them against a small owner table you edit in one place. The reply goes by email to the matching owner, or to your default address when no tag matches.\n\nNo credits are used. Out of office and other automatic replies are left out by Argorant.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Edit **Owners**: one line per campaign tag with the owner's email, plus a default address.\n5. Tag your campaigns in Argorant with those tags.\n6. Add a Gmail credential to **Email the owner**.\n\n### Customization\nAdd more lines to the owner table, or send a team chat message instead of an email.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "acb65982-0a01-4c9d-bf8b-779d7fe4b635",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Match the owner\nCampaign tags decide who gets the reply. Edit the table in Owners only.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "bc639907-8618-47c0-9832-b20598f92874",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.received",
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "d59766d5-db1f-408d-9870-f13c0eaa0ddf",
+      "name": "New or interested reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "9e35a1ec-dffa-4a29-a8d2-cad2dd1ef841"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cf80a683-8090-4b42-b94d-52fc2538555b",
+              "name": "owners",
+              "value": "{\"enterprise\": \"maya.chen@linfield.example\", \"smb\": \"alex.rivera@yourcompany.example\"}",
+              "type": "object"
+            },
+            {
+              "id": "798d8096-6cf2-4b10-88c8-20c529003591",
+              "name": "default_owner",
+              "value": "alex.rivera@yourcompany.example",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d67a1f96-8225-418a-b1bc-2e570727a083",
+      "name": "Owners",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "get",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.campaign_id }}"
+        },
+        "simplify": true
+      },
+      "id": "90b82f30-f492-44d6-b86b-ae937b770e1c",
+      "name": "Get the campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const evt = $('New or interested reply').first().json;\nconst cfg = $('Owners').first().json;\nconst owners = typeof cfg.owners === 'string' ? JSON.parse(cfg.owners) : cfg.owners;\nconst tags = ($input.first().json.tags || []).map(t => String(t).toLowerCase());\nconst tag = tags.find(t => owners[t]);\nreturn [{ json: { to: tag ? owners[tag] : cfg.default_owner, matched_tag: tag || null,\n  campaign: $input.first().json.name, campaign_url: $input.first().json.url,\n  lead_email: evt.lead_email, subject: evt.subject, snippet: evt.snippet,\n  kind: evt.event === 'reply.positive' ? 'Interested reply' : 'New reply' } }];"
+      },
+      "id": "a5ba5a53-23df-44de-92fb-d5d94a595725",
+      "name": "Pick the owner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.kind }} from {{ $json.lead_email }} ({{ $json.campaign }})",
+        "emailType": "text",
+        "message": "={{ $json.kind }} on {{ $json.campaign }}\n\nFrom: {{ $json.lead_email }}\nSubject: {{ $json.subject }}\n\n{{ $json.snippet }}\n\nOpen the campaign: {{ $json.campaign_url }}\nAnswer in Argorant: https://app.argorant.com/inbox",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "2ce6ff95-ab30-42ac-9992-9f1c0cf6c7bd",
+      "name": "Email the owner",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New or interested reply": {
+      "main": [
+        [
+          {
+            "node": "Owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Owners": {
+      "main": [
+        [
+          {
+            "node": "Get the campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the campaign": {
+      "main": [
+        [
+          {
+            "node": "Pick the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick the owner": {
+      "main": [
+        [
+          {
+            "node": "Email the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

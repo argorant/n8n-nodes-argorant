@@ -1,0 +1,319 @@
+{
+  "name": "Triage campaign replies with your own AI agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Triage campaign replies with your own AI agent\n\n### How it works\nLet your own AI model sort the inbox, with clear limits. Every new reply starts the workflow; the trigger adds the conversation ID. The workflow reads the whole thread and hands it to the agent. The agent loads your reply statuses, sets the one that fits, blocks the address when someone asks to stop, takes a wrong person out of the campaign, and returns a two-line summary that is posted to Slack. The agent has no tool to send email, so nothing goes out to the prospect.\n\nArgorant actions here are free. Your model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Pick a chat model in **Chat model** (any chat model node works) and add its credential.\n5. Read the rules in **Reply triage agent** and adapt them.\n6. Add a Slack credential and channel to **Post the summary**.\n\n### Customization\nAdd your own pipeline stages in Argorant; the agent reads them with Get reply statuses.",
+        "height": 643,
+        "width": 520,
+        "color": 1
+      },
+      "id": "3c6e2e47-95c6-4a24-8d47-e40cfd1bcf3d",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Your AI model\nAny chat model node works. It decides; the tools act in Argorant.",
+        "height": 120,
+        "width": 260,
+        "color": 7
+      },
+      "id": "e7b938cb-43ab-4610-940a-16d0625e40f5",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Allowed actions\nLabel, block and remove only. There is no tool that sends email.",
+        "height": 120,
+        "width": 700,
+        "color": 7
+      },
+      "id": "517b008a-800c-4bf7-b994-4d90bedf45a6",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        520,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.received"
+        ],
+        "options": {}
+      },
+      "id": "ed4703e0-7758-4e47-ad66-4ba5cd2cf6b9",
+      "name": "New reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c4181942-fa0a-4cef-affc-394896b6c4d9"
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "get",
+        "conversationId": "={{ $json.conversation_id }}",
+        "simplify": true
+      },
+      "id": "6fbce2ad-5a3f-46a4-9259-f1fe2735db59",
+      "name": "Read the thread",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Conversation ID: {{ $('New reply').item.json.conversation_id }}\nCampaign ID: {{ $('New reply').item.json.campaign_id }}\nFrom: {{ $('New reply').item.json.lead_email }}\nSubject: {{ $json.subject }}\n\nReply:\n{{ $json.body || $('New reply').item.json.snippet }}",
+        "options": {
+          "systemMessage": "You triage replies to B2B outreach for the user's team. For each reply:\n1. Call Get reply statuses once and use only those keys.\n2. Call Set reply status with the best key: positive for interest, meeting_request for a meeting, unsubscribe when the person asks to stop, neutral when unclear.\n3. If the person asks to stop or not to be contacted, call Block address with their email.\n4. If the person says they are the wrong contact or left the company, call Remove from campaign with their email and the campaign id.\n5. Never write to the prospect. Answer with two short lines: the status you set and what the reply says.",
+          "maxIterations": 10
+        }
+      },
+      "id": "ee678d69-0c49-47a5-bde8-af4153d4dda2",
+      "name": "Reply triage agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "d5f911af-53ed-41cd-a4c9-0b474a87f1ca",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "List the reply statuses this workspace uses. Free.",
+        "resource": "reply",
+        "operation": "getStatuses"
+      },
+      "id": "971c7263-89a1-48cb-9e3e-37148695a0c0",
+      "name": "Get reply statuses",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        580,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Set the status of the conversation. Free.",
+        "resource": "reply",
+        "operation": "setStatus",
+        "conversationId": "={{ $fromAI('conversation_id', 'The conversation ID from the prompt', 'string') }}",
+        "classification": "={{ $fromAI('status_key', 'One status key from Get reply statuses', 'string') }}"
+      },
+      "id": "67ec384f-e8f3-498e-b3c2-792ac49674d4",
+      "name": "Set reply status",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        740,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Block an email address so no campaign emails it again. Free. Only when the person asks to stop.",
+        "resource": "blocklist",
+        "operation": "add",
+        "value": "={{ $fromAI('email', 'The email address of the person', 'string') }}",
+        "reason": "asked to stop (triage agent)"
+      },
+      "id": "0f61b7e4-57be-4229-b3e7-6cf811580c12",
+      "name": "Block address",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        900,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Take one person out of a campaign. Free. Only for a wrong contact.",
+        "resource": "campaign",
+        "operation": "removeLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('campaign_id', 'The campaign ID from the prompt', 'string') }}"
+        },
+        "removeBy": "emails",
+        "removeEmails": "={{ $fromAI('email', 'The email address of the person', 'string') }}",
+        "includeContacted": true,
+        "preview": false
+      },
+      "id": "da73ec17-d2ff-4c4d-aaa5-89f764a6f4d0",
+      "name": "Remove from campaign",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Reply from {{ $('New reply').item.json.lead_email }} ({{ $('New reply').item.json.campaign_name || 'campaign' }}):\n{{ $json.output }}",
+        "otherOptions": {}
+      },
+      "id": "e6f63bae-641f-4788-b270-5beeb676d1d6",
+      "name": "Post the summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        840,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Get reply statuses": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set reply status": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block address": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove from campaign": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New reply": {
+      "main": [
+        [
+          {
+            "node": "Read the thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the thread": {
+      "main": [
+        [
+          {
+            "node": "Reply triage agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply triage agent": {
+      "main": [
+        [
+          {
+            "node": "Post the summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

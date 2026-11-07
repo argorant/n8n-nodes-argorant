@@ -1,0 +1,278 @@
+{
+  "name": "Send personal first lines researched in Airtable with an Argorant campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Send personal first lines researched in Airtable with an Argorant campaign\n\n### How it works\nWrite the openers where your team already works, send them from Argorant. Your Airtable table holds one row per prospect with Email, Opener and Status. Every hour the workflow reads the rows with Status Ready and an opener, writes each opener into the campaign as the person's own line (people already in the campaign only), and sets Status to Synced. Lines a person already has are kept unless you switch on replace. Everyone without a line gets the fallback, so the campaign can launch at any time.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick the campaign in **Set up the opener variable** and run that branch once.\n4. Write {{custom_opener}} into the first email of the campaign.\n5. Add an Airtable token and pick the base and table in both Airtable nodes, pick the campaign in **Write the personal lines**, then activate.\n\n### Customization\nAdd a second variable such as {{custom_ps}} in the setup node and map a second Airtable field.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "5f68c818-bddf-45c6-860b-3176acb83886",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## One-time setup\nCreates {{custom_opener}} with a fallback for everyone without a line.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "277ca393-7b27-44c0-80eb-3ffc45852f5b",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Hourly sync\nReady rows become personal lines. People must already be in the campaign.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "06c0c6d6-1a4b-4c0d-9808-a8b22cc7775a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "cfb509fe-9e5b-47ce-bc57-d74c36d07f51",
+      "name": "Run once to set up",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "setUpPersonalLines",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "variables": {
+          "variable": [
+            {
+              "name": "opener",
+              "fallback": "Hope the quarter is going well.",
+              "instruction": "One sentence about something recent and specific at their company.",
+              "maxLength": 150
+            }
+          ]
+        }
+      },
+      "id": "503c0ec4-13ca-4ef5-bda1-ef84502d24bf",
+      "name": "Set up the opener variable",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "61249a13-b0a5-40fa-a86b-87dbc235c6dc",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filterByFormula": "AND({Status} = 'Ready', {Opener} != '')",
+        "returnAll": true,
+        "options": {},
+        "sort": {}
+      },
+      "id": "c3eec09b-f28e-4d5c-9c55-bf3adf157a77",
+      "name": "Get Ready rows",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "writePersonalLines",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "lineEmail": "={{ $json.Email }}",
+        "lines": {
+          "line": [
+            {
+              "variable": "opener",
+              "text": "={{ $json.Opener }}"
+            }
+          ]
+        },
+        "overwrite": false
+      },
+      "id": "24591eb1-2678-4622-8c52-de3fbdd46da7",
+      "name": "Write the personal lines",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Get Ready rows').item.json.id }}",
+            "Status": "Synced"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "61fd872b-676a-484d-a91b-1472e73355fe",
+      "name": "Mark as Synced",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run once to set up": {
+      "main": [
+        [
+          {
+            "node": "Set up the opener variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "Get Ready rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ready rows": {
+      "main": [
+        [
+          {
+            "node": "Write the personal lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the personal lines": {
+      "main": [
+        [
+          {
+            "node": "Mark as Synced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

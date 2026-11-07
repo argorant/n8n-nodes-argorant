@@ -1,0 +1,414 @@
+{
+  "name": "IT services and MSPs: build a campaign for IT leaders at companies on a given technology",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## IT services and MSPs: build a campaign for IT leaders at companies on a given technology\n\n### How it works\nSell to the teams that run the platform you know best. The form asks for a technology (as Argorant names it, for example a cloud or ERP platform), a country and a company size. Argorant counts IT leaders (department IT, seniority Director, VP or C-level) at companies of that size that use the technology. The workflow saves them as a list and creates a campaign draft with a first email and a follow-up. When the count is within max_people in Settings, the list is added to the draft; above it, nothing is spent and the form tells you to narrow the search.\n\nCosts: count, list and draft are free; adding costs 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set max_people in **Settings**.\n4. Activate and open the production URL of **Market form**.\n5. Review the draft in Argorant, attach mailboxes and launch there or with Campaign > Launch.\n\n### Customization\nEdit the emails in **Create the campaign draft**. Change seniority or departments in the count and list nodes.",
+        "height": 687,
+        "width": 520,
+        "color": 1
+      },
+      "id": "9acc471d-9498-4fee-bc60-2cb2fa536686",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size the market\nFree count and list of IT leaders at companies on the technology.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "1c529ad5-f38e-4a5b-b511-2f869f8931c9",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft and fill\nThe draft is free. People are added only within max_people.",
+        "height": 500,
+        "width": 940,
+        "color": 7
+      },
+      "id": "9a762499-5412-4e17-a427-c71ae1e814a7",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Build an IT leaders campaign",
+        "formDescription": "Technology, country and company size of your best customers.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Technology",
+              "requiredField": true,
+              "placeholder": "As Argorant names it"
+            },
+            {
+              "fieldLabel": "Country",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company size",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "11-50"
+                  },
+                  {
+                    "option": "51-200"
+                  },
+                  {
+                    "option": "201-500"
+                  },
+                  {
+                    "option": "501-1000"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "0ebbc68c-0260-4bc4-a9a3-646320d702e0",
+      "name": "Market form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "96b6f205-7a86-4e07-ae8f-b3cd92fac6a1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1c6756f-d275-431e-a56b-ef9fa150028c",
+              "name": "max_people",
+              "value": "300",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "2f8d5d05-9781-422f-9fb6-7d7f8679dec0",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "technologies": "={{ $('Market form').item.json.Technology }}",
+          "country": "={{ [$('Market form').item.json.Country] }}",
+          "employeeRange": "={{ [$('Market form').item.json['Company size']] }}",
+          "departments": [
+            "IT"
+          ],
+          "seniority": [
+            "C-Level",
+            "Director",
+            "VP"
+          ]
+        }
+      },
+      "id": "4cf1437b-4bc9-4405-bf62-28d0f91744e1",
+      "name": "Count IT leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=IT leaders, {{ $('Market form').item.json.Technology }}, {{ $('Market form').item.json.Country }}",
+        "peopleSource": "filters",
+        "filters": {
+          "technologies": "={{ $('Market form').item.json.Technology }}",
+          "country": "={{ [$('Market form').item.json.Country] }}",
+          "employeeRange": "={{ [$('Market form').item.json['Company size']] }}",
+          "departments": [
+            "IT"
+          ],
+          "seniority": [
+            "C-Level",
+            "Director",
+            "VP"
+          ]
+        },
+        "simplify": true
+      },
+      "id": "95c93a4c-96a6-4787-b325-44cb4315c7f0",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "create",
+        "name": "=IT leaders on {{ $('Market form').item.json.Technology }}, {{ $('Market form').item.json.Country }}",
+        "steps": {
+          "step": [
+            {
+              "subject": "Who keeps your platforms running, {{first_name|there}}?",
+              "body": "Hi {{first_name|there}},\n\nWe look after the platforms teams like {{company|yours}} run every day: updates, security and the tickets nobody has time for.\n\nWould a 20 minute call next week be useful to compare notes?\n\nAlex",
+              "delayDays": 0
+            },
+            {
+              "subject": "",
+              "body": "Hi {{first_name|there}}, worth a short call, or should I check back next quarter?",
+              "delayDays": 4
+            }
+          ]
+        },
+        "senderMode": "none",
+        "settings": {
+          "tags": "msp"
+        },
+        "simplify": true
+      },
+      "id": "7246a597-a3cc-4b35-bf84-bc6cd3f11caf",
+      "name": "Create the campaign draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4e9db9e4-3474-4b8c-88a4-f6d851af7d06",
+              "leftValue": "={{ $('Count IT leaders').item.json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_people }}"
+            },
+            {
+              "id": "b1215546-81cb-4745-90e8-98b0b40d7416",
+              "leftValue": "={{ $('Count IT leaders').item.json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4e254558-2455-4d64-bd2f-ac6ee2c9503e",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create the campaign draft').item.json.id }}"
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "02727b49-998a-435b-93c6-91e90ade54c5",
+      "name": "Add the list to the draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Your campaign draft is ready",
+        "completionMessage": "={{ $('Count IT leaders').item.json.count }} IT leaders found and added to the draft. Review it in Argorant, attach mailboxes and launch.",
+        "options": {}
+      },
+      "id": "3b1dad39-7371-406c-879a-8480aadedbdf",
+      "name": "Draft ready",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "List saved, nobody added yet",
+        "completionMessage": "={{ $('Count IT leaders').item.json.count }} people match, above your budget of {{ $('Settings').item.json.max_people }} (or none). The list and the draft are saved; narrow the size or country, or add the list in Argorant.",
+        "options": {}
+      },
+      "id": "9aced50a-432e-4260-95da-53b0e428b6c2",
+      "name": "Narrow the search",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Market form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count IT leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count IT leaders": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Create the campaign draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the campaign draft": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Add the list to the draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Narrow the search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the list to the draft": {
+      "main": [
+        [
+          {
+            "node": "Draft ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,246 @@
+{
+  "name": "Follow up webinar attendees and no-shows with two different campaigns",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Follow up webinar attendees and no-shows with two different campaigns\n\n### How it works\nTwo audiences, two messages. After the event, POST JSON with webinar_title, recording_url and attendees (email, first_name, last_name, company, attended, minutes_watched) to the webhook. The workflow splits the list. Attendees join your follow-up campaign with {{webinar_title}} and {{minutes_watched}} as variables. Registrants who did not attend join your replay campaign with {{recording_url}}. Every address is checked and only valid emails join; people already in a campaign are not added twice.\n\nYour own contacts cost no credits.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick the campaigns in **Add attendees to follow-up** and **Add no-shows to replay**.\n4. Write the variables into your emails.\n5. POST the attendee list to the production URL of **Attendee list received**.\n\n### Customization\nAdd a third path for people who watched less than ten minutes.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "905908e4-b87e-4fed-a4ed-040aedab9d75",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Split the list\nOne item per registrant, with the event title and the recording link.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "84fe844a-cd38-4522-b6fc-1de6e948aa0b",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Two campaigns\nAttendees get the follow-up, no-shows the replay. Only valid emails join.",
+        "height": 500,
+        "width": 260,
+        "color": 7
+      },
+      "id": "a131fb62-02d9-4899-8e9d-8381e5d16d07",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "argorant-webinar",
+        "options": {}
+      },
+      "id": "b0eba1fd-42be-4379-a1fb-4dcb5cb5fd63",
+      "name": "Attendee list received",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "93559175-c733-4d0b-9c92-e1a92ec14850"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || {};\nreturn (b.attendees || []).filter(a => a.email).map(a => ({ json: { ...a, attended: a.attended === true || a.attended === 'true',\n  webinar_title: b.webinar_title || '', recording_url: b.recording_url || '' } }));"
+      },
+      "id": "af51f9c6-db44-4d6c-a6ce-c3a85d8bedca",
+      "name": "One item per attendee",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f2487833-accc-423f-b6d1-6a554ed143f6",
+              "leftValue": "={{ $json.attended }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5293e3df-370d-48ad-9a88-dc84c331a623",
+      "name": "Attended?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}"
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {},
+        "extraColumns": {
+          "column": [
+            {
+              "name": "webinar_title",
+              "value": "={{ $json.webinar_title }}"
+            },
+            {
+              "name": "minutes_watched",
+              "value": "={{ $json.minutes_watched }}"
+            }
+          ]
+        }
+      },
+      "id": "cedece93-363e-456f-bd3f-a65643ba5e89",
+      "name": "Add attendees to follow-up",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}"
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {},
+        "extraColumns": {
+          "column": [
+            {
+              "name": "webinar_title",
+              "value": "={{ $json.webinar_title }}"
+            },
+            {
+              "name": "recording_url",
+              "value": "={{ $json.recording_url }}"
+            }
+          ]
+        }
+      },
+      "id": "d4c32c52-9960-4083-b703-df1da1cd9ed1",
+      "name": "Add no-shows to replay",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Attendee list received": {
+      "main": [
+        [
+          {
+            "node": "One item per attendee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per attendee": {
+      "main": [
+        [
+          {
+            "node": "Attended?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attended?": {
+      "main": [
+        [
+          {
+            "node": "Add attendees to follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add no-shows to replay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,279 @@
+{
+  "name": "Insurance brokers: a monthly CSV of owners of newly founded companies",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Insurance brokers: a monthly CSV of owners of newly founded companies\n\n### How it works\nNew companies need new policies. Once a month the workflow asks Argorant for an export of owners, founders, C-level and finance heads at companies founded since last year in construction, transportation and logistics, and manufacturing in your country. Every email is checked while the file is built and only passing contacts are charged. People you exported before are left out. When the file is ready, it is emailed to you as a CSV for your CRM or dialer.\n\nCosts: 1 credit per contact in the file, capped by max_rows.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set report_to and max_rows in **Settings**; change the industries and country in **Export new company owners**.\n4. Add a Gmail credential to **Email the CSV** and activate.\n\n### Customization\nAdd a phone column with Include Phone Numbers (10 credits per number, Pro plan).",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "aff05d71-1183-4c16-b383-801735ad7836",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Build the file\nChecked emails only; at most max_rows credits a month.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "6a4c214b-25c8-45f4-b2c7-451b83bd6896",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Deliver\nThe CSV goes to your inbox.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "6bb958ba-0b9d-4503-a550-35b123606921",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "e45ad7a2-d0df-4208-8fdd-3e7a9b1ef283",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75957a1f-8285-4238-951e-01c4f6aedfb5",
+              "name": "report_to",
+              "value": "alex.rivera@yourcompany.example",
+              "type": "string"
+            },
+            {
+              "id": "3117067b-2c09-4ce2-9752-d4e0450715b2",
+              "name": "max_rows",
+              "value": "200",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a39da673-c968-49e3-9ead-106de0a81266",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "export",
+        "operation": "create",
+        "filterSource": "fields",
+        "filters": {
+          "foundedMin": "={{ $now.year - 1 }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "industries": [
+            "Construction",
+            "Transportation & Logistics",
+            "Manufacturing"
+          ],
+          "country": [
+            "United States"
+          ]
+        },
+        "exportLimit": "={{ $json.max_rows }}",
+        "exportOptions": {
+          "waitMinutes": 20
+        }
+      },
+      "id": "f41499cc-b30d-4f88-b7ef-79a974d50748",
+      "name": "Export new company owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "377b35d5-84f0-4200-8fda-cc2bf70d87a7",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "done"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "92af66b5-97fc-46cf-92b0-5191e7b60df7",
+      "name": "File ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "export",
+        "operation": "download",
+        "exportId": "={{ $json.job_id }}",
+        "grades": "valid",
+        "binaryPropertyName": "data"
+      },
+      "id": "43f8ac0f-af7a-4582-a733-4ded9ab7daad",
+      "name": "Download the CSV",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Settings').item.json.report_to }}",
+        "subject": "=New company owners: {{ $json.rows }} contacts",
+        "emailType": "text",
+        "message": "=Attached: {{ $json.rows }} owners and finance heads of companies founded since last year, every email checked.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          },
+          "appendAttribution": false
+        }
+      },
+      "id": "5794135b-bfce-4a52-98a9-38c47343c6da",
+      "name": "Email the CSV",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Export new company owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export new company owners": {
+      "main": [
+        [
+          {
+            "node": "File ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File ready?": {
+      "main": [
+        [
+          {
+            "node": "Download the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the CSV": {
+      "main": [
+        [
+          {
+            "node": "Email the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

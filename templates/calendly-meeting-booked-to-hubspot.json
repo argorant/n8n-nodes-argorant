@@ -1,0 +1,294 @@
+{
+  "name": "When a prospect books a meeting, stop the sequence and update HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## When a prospect books a meeting, stop the sequence and update HubSpot\n\n### How it works\nA booked meeting should end the sequence at once. The Calendly Trigger fires when an invitee books. The workflow searches the Argorant inbox for that email. If a conversation exists, it sets its status (meeting_booked by default; switch that status on in Argorant or use meeting_request) and removes the person from that campaign so no follow-up is sent. Either way, the contact is created or updated in HubSpot with the lifecycle stage sales qualified lead.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Calendly credential to **Meeting booked**.\n4. In **Settings**, keep status_key meeting_booked (switch it on in Argorant, Settings, Reply statuses) or use meeting_request.\n5. Add a HubSpot App Token credential (private app, contacts write) to **Update HubSpot** and activate.\n\n### Customization\nChange the lifecycle stage, or post the booking to your team chat as well.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "7efa45ce-a9ed-4d94-a79c-9e64d8db1458",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Stop outreach\nThe conversation gets the booked status and the person leaves the campaign.",
+        "height": 380,
+        "width": 940,
+        "color": 7
+      },
+      "id": "a19133ff-d9eb-49b2-99c3-14501d79ab64",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CRM\nThe contact becomes a sales qualified lead in HubSpot.",
+        "height": 280,
+        "width": 260,
+        "color": 7
+      },
+      "id": "1a5abea8-d9e5-4842-87ac-56363b4a4291",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "scope": "user",
+        "events": [
+          "invitee.created"
+        ]
+      },
+      "id": "20b56b79-6b41-4dcb-b129-8260e0c951ff",
+      "name": "Meeting booked",
+      "type": "n8n-nodes-base.calendlyTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "dae36507-14be-40c7-a739-4ad4f6e16811"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7135e6c2-1d0e-49bd-a06d-aa6d6c0a4c70",
+              "name": "status_key",
+              "value": "meeting_booked",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b18c0128-b2b3-474a-965f-53fcd85ffff5",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "getMany",
+        "folder": "all",
+        "returnAll": false,
+        "limit": 1,
+        "simplify": true,
+        "replyFilters": {
+          "q": "={{ $json.payload.email }}"
+        }
+      },
+      "id": "ebe440c6-ff6f-488f-b270-de318adf3db1",
+      "name": "Find the conversation",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "14b9975e-4278-4232-93c9-f96d6c03f91d",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a42aee36-c1a5-45bd-a9be-57ca1d07c85f",
+      "name": "Conversation found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "setStatus",
+        "conversationId": "={{ $json.id }}",
+        "classification": "={{ $('Settings').item.json.status_key }}"
+      },
+      "id": "2557c228-fb51-4a2f-ac6d-bd2ba7dd01a3",
+      "name": "Set status",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "removeLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Find the conversation').item.json.campaign_id }}"
+        },
+        "removeBy": "emails",
+        "removeEmails": "={{ $('Meeting booked').item.json.payload.email }}",
+        "includeContacted": true,
+        "preview": false
+      },
+      "id": "0f9e0fe7-c8e8-418a-bef4-be4ed098d6b5",
+      "name": "Stop the sequence",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('Meeting booked').item.json.payload.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Meeting booked').item.json.payload.first_name }}",
+          "lastName": "={{ $('Meeting booked').item.json.payload.last_name }}",
+          "lifeCycleStage": "salesqualifiedlead"
+        },
+        "options": {}
+      },
+      "id": "ba2c79eb-7343-42c0-986d-22d0ab9a3b7d",
+      "name": "Update HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Meeting booked": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Find the conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the conversation": {
+      "main": [
+        [
+          {
+            "node": "Conversation found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation found?": {
+      "main": [
+        [
+          {
+            "node": "Set status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set status": {
+      "main": [
+        [
+          {
+            "node": "Stop the sequence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop the sequence": {
+      "main": [
+        [
+          {
+            "node": "Update HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

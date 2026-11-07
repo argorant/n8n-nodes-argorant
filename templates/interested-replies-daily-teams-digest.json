@@ -1,0 +1,219 @@
+{
+  "name": "Send a morning digest of interested replies to a Teams channel",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Send a morning digest of interested replies to a Teams channel\n\n### How it works\nOne calm message a day instead of many alerts. Every weekday at 8:00 the workflow reads the replies in the Interested folder of Argorant, keeps the ones from the last 24 hours and posts a short table to a Microsoft Teams channel: who replied, the campaign, the subject and the first lines. If nobody replied with interest, nothing is posted.\n\nNo credits are used and no webhooks are needed, so it works on every Argorant plan.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. In **Post digest to Teams**, add a Microsoft Teams credential and pick the team and channel.\n4. Change the time in **Every weekday at 8:00** if you like, then activate.\n\n### Customization\nChange the folder in **Get interested replies** to Replies for every reply, or raise the time window in **Last 24 hours**.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "848f70c3-8871-4a83-8daf-fc19c4eeb666",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Collect\nInterested replies across all campaigns, kept to the last 24 hours.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "5cbc2f1c-f38a-448c-87ae-443163f695b8",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Post\nOne table per day. Nothing is posted on days without interested replies.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "5a79750e-b63f-4dc7-8abb-5bd60526e4c1",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "ab3afe94-ed9d-43bf-9f54-e9a62b8156ce",
+      "name": "Every weekday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "getMany",
+        "folder": "interested",
+        "returnAll": false,
+        "limit": 200,
+        "simplify": true,
+        "replyFilters": {}
+      },
+      "id": "6ced3a90-7d1d-481f-9de2-4ec3e152ced0",
+      "name": "Get interested replies",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "90796f66-a437-48c3-ba7c-360c389ae14b",
+              "leftValue": "={{ $json.created_at }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              },
+              "rightValue": "={{ $now.minus({ hours: 24 }).toISO() }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "719c2672-c23b-440f-b15d-c466b4b52613",
+      "name": "Last 24 hours",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nif (!rows.length) return [];\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');\nconst lines = rows.map(r => `<tr><td>${esc(r.lead_name || r.from_email)}</td><td>${esc(r.company)}</td><td>${esc(r.campaign_name)}</td><td>${esc((r.body || '').slice(0, 160))}</td></tr>`);\nconst html = `<b>${rows.length} interested ${rows.length === 1 ? 'reply' : 'replies'} in the last 24 hours</b>`\n  + '<table><tr><th>Person</th><th>Company</th><th>Campaign</th><th>Reply</th></tr>' + lines.join('') + '</table>'\n  + '<p>Answer them in Argorant: https://app.argorant.com/inbox</p>';\nreturn [{ json: { html, count: rows.length } }];"
+      },
+      "id": "3dc5ba2f-0b44-4502-88ed-6ac171e04809",
+      "name": "Build the digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "channelMessage",
+        "operation": "create",
+        "teamId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "contentType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "75d305f9-0909-4b6f-bddd-781e0b17f300",
+      "name": "Post digest to Teams",
+      "type": "n8n-nodes-base.microsoftTeams",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every weekday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Get interested replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get interested replies": {
+      "main": [
+        [
+          {
+            "node": "Last 24 hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 24 hours": {
+      "main": [
+        [
+          {
+            "node": "Build the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the digest": {
+      "main": [
+        [
+          {
+            "node": "Post digest to Teams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

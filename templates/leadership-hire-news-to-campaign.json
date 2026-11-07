@@ -1,0 +1,464 @@
+{
+  "name": "Reach newly appointed leaders from a news feed",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Reach newly appointed leaders from a news feed\n\n### How it works\nNew leaders change suppliers in their first months. This workflow watches an RSS feed of press releases or industry news. Items that mention an appointment go to your own AI model, which extracts the person's name, the new title, the company and its website domain. Argorant then finds the work email; confirmed (valid) addresses join your campaign with {{new_title}} and {{news_link}} as variables, so the first email can congratulate them on the new role.\n\nCosts: 1 credit per email found, 0.25 when nothing is found, at most max_per_run lookups per hour.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Paste your feed URL into **New press release**.\n4. Pick a chat model in **Chat model** (any chat model node works).\n5. Set max_per_run in **Settings**, pick the campaign in **Add to campaign** and activate.\n\n### Customization\nChange the keywords in **Appointments only**, or use {{new_title}} in your first email.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "09ff8b51-1d56-4202-9ff2-269bfb5ae2f7",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Spot appointments\nKeyword filter, then a cap per run to limit lookups.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "7953a393-5283-4c54-9f07-957ebf1d465b",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Understand the news\nYour own model extracts name, title and domain. Any chat model node works.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "73c6b737-5d0b-4000-9ade-e448b96117c9",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find and enroll\n1 credit per email found, 0.25 when not. Only confirmed emails join.",
+        "height": 380,
+        "width": 700,
+        "color": 7
+      },
+      "id": "046c24bd-0927-4f20-a0da-04e0ac146909",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "feedUrl": "https://example.com/press-releases.rss"
+      },
+      "id": "93f1a675-b8e1-4c2f-bc03-3013558c4ff9",
+      "name": "New press release",
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b2b78d6-e282-4098-8ef2-126ddb9bc6a3",
+              "name": "max_per_run",
+              "value": "5",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "61c24a46-0cf9-4a42-b745-b6685d2bcf7f",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2faf2cb4-2e02-4a9c-9573-f89afc685951",
+              "leftValue": "={{ ($json.title || '') + ' ' + ($json.contentSnippet || '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              },
+              "rightValue": "/(appoint|named?|hires|joins as|promoted)/i"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6d223e78-f368-4b22-8b20-044ab39ec894",
+      "name": "Appointments only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_per_run }}"
+      },
+      "id": "775c7646-f22a-4d78-84ff-00177f0369ce",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.title }}\n{{ $json.contentSnippet }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "first_name",
+              "description": "First name of the newly appointed person",
+              "required": true
+            },
+            {
+              "name": "last_name",
+              "description": "Last name of the newly appointed person",
+              "required": true
+            },
+            {
+              "name": "new_title",
+              "description": "The new job title",
+              "required": true
+            },
+            {
+              "name": "company_name",
+              "description": "The company that appointed the person"
+            },
+            {
+              "name": "company_domain",
+              "description": "The company website domain, for example linfield.example. Empty if not in the text."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bafd3cb4-92aa-4337-a5a4-53a79e28b85a",
+      "name": "Extract the new leader",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "5f7b9f46-c8ef-4e62-b93e-68f5bcdfb578",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e0467ec3-3e18-4b31-9042-e7e9912fe91c",
+              "leftValue": "={{ $json.output.last_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "5d28dd10-1c5e-4d69-bb86-9874f65c6fca",
+              "leftValue": "={{ $json.output.company_domain }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a6533e21-3665-49f8-b2ff-9141de536d97",
+      "name": "Has name and domain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "find",
+        "firstName": "={{ $json.output.first_name }}",
+        "lastName": "={{ $json.output.last_name }}",
+        "domain": "={{ $json.output.company_domain }}"
+      },
+      "id": "28e7a2b8-7531-4355-9f0d-27fb1aced6dd",
+      "name": "Find work email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "40214ef2-6d71-4400-8fa5-22d8670977b0",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1b8d5624-d128-4a4f-b9f1-0245dcdffc32",
+      "name": "Confirmed email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('Extract the new leader').item.json.output.first_name }}",
+          "last_name": "={{ $('Extract the new leader').item.json.output.last_name }}",
+          "company": "={{ $('Extract the new leader').item.json.output.company_name }}",
+          "title": "={{ $('Extract the new leader').item.json.output.new_title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "new_title",
+              "value": "={{ $('Extract the new leader').item.json.output.new_title }}"
+            },
+            {
+              "name": "news_link",
+              "value": "={{ $('Appointments only').item.json.link }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "c6e522ec-8846-453e-9d37-887598a764d7",
+      "name": "Add to campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "New press release": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Appointments only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointments only": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Extract the new leader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract the new leader": {
+      "main": [
+        [
+          {
+            "node": "Has name and domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract the new leader",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has name and domain?": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Confirmed email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmed email?": {
+      "main": [
+        [
+          {
+            "node": "Add to campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
