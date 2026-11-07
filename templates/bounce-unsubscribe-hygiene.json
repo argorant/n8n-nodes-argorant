@@ -1,0 +1,274 @@
+{
+  "name": "Block bounced and opted-out addresses everywhere and flag them in HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Block bounced and opted-out addresses everywhere and flag them in HubSpot\n\n### How it works\nOne bounce or opt-out should count everywhere. Argorant already stops the campaign that bounced or got the opt-out. This workflow goes further: it blocks the address for every campaign of your workspace, flags the contact in HubSpot with a custom property (bounced or unsubscribed), and appends a row to a log sheet with the date, address, reason and campaign, so you can review deliverability.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. In HubSpot, create a contact property with the internal name argorant_status (single line text). Add a HubSpot credential.\n5. Create a sheet with the columns date, email, reason, campaign_id and pick it in **Log the event**.\n\n### Customization\nBlock the whole domain for hard bounces, or skip the CRM step.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "f42c7191-ac38-4601-a4ac-4ac4eaf112cb",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Block\nThe address leaves every campaign of the workspace and is never added again.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "74ff7432-0e1c-4452-9e0b-5c435c5cff36",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Record\nThe CRM flag and the log keep your other tools in line.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "59e61200-cc24-4b4f-94c5-2371b7d6a6ef",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "email.bounced",
+          "email.unsubscribed"
+        ],
+        "options": {}
+      },
+      "id": "122e5d37-5fa7-4328-b0de-9ae6137b9255",
+      "name": "Bounce or opt-out",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a0784968-504e-4000-bef3-9d7e2086b68c"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ea3ce18-c972-4cf8-bb97-7b284873e881",
+              "name": "email",
+              "value": "={{ $json.lead_email.toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "6b8ae156-8412-4e1c-bb18-b6395cfbf1b8",
+              "name": "reason",
+              "value": "={{ $json.event === 'email.bounced' ? 'bounced' : 'unsubscribed' }}",
+              "type": "string"
+            },
+            {
+              "id": "0990f368-96d8-42b0-b346-b7fde7a81445",
+              "name": "campaign_id",
+              "value": "={{ $json.campaign_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ca42542e-1f36-443f-8dc6-8570724613e4",
+      "name": "Reason",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "blocklist",
+        "operation": "add",
+        "value": "={{ $json.email }}",
+        "reason": "={{ $json.reason }}"
+      },
+      "id": "62d2effe-6401-479b-8281-6ce65d1d7aa0",
+      "name": "Block everywhere",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('Reason').item.json.email }}",
+        "additionalFields": {
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "argorant_status",
+                "value": "={{ $('Reason').item.json.reason }}"
+              }
+            ]
+          }
+        },
+        "options": {}
+      },
+      "id": "7216e795-d908-4649-8a2f-18afe83c7ba8",
+      "name": "Flag in HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISODate() }}",
+            "email": "={{ $('Reason').item.json.email }}",
+            "reason": "={{ $('Reason').item.json.reason }}",
+            "campaign_id": "={{ $('Reason').item.json.campaign_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "campaign_id",
+              "displayName": "campaign_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4a3c7e0a-962b-4c4c-b406-34a6d942fd7f",
+      "name": "Log the event",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Bounce or opt-out": {
+      "main": [
+        [
+          {
+            "node": "Reason",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reason": {
+      "main": [
+        [
+          {
+            "node": "Block everywhere",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block everywhere": {
+      "main": [
+        [
+          {
+            "node": "Flag in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flag in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Log the event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

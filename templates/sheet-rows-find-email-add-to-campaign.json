@@ -1,0 +1,413 @@
+{
+  "name": "Find work emails for new Google Sheets rows and add them to a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Find work emails for new Google Sheets rows and add them to a campaign\n\n### How it works\nTurn a spreadsheet of names and company websites into campaign contacts. When a row is added, the workflow checks that it has a first name, last name and domain, asks Argorant for the work email and adds people with a confirmed (valid) email to your campaign, with their name and company as variables. The status column says what happened: added, not confirmed, or no email found.\n\nCosts: 1 credit per email found, 0.25 when nothing is found. Rows that are incomplete cost nothing.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Prepare a sheet with the columns first_name, last_name, company, domain, email and status.\n4. Add a Google Sheets credential and pick the sheet in **New row** and **Write back the result**.\n5. Pick the campaign in **Add to campaign** and activate.\n\n### Customization\nLower the polling interval of **New row**, or add a column title and map it as the job title.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "f0412108-bb01-4f6e-abd6-3abc1398221d",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find the email\nOnly complete rows are looked up. 1 credit when an email is found, 0.25 when not.",
+        "height": 380,
+        "width": 700,
+        "color": 7
+      },
+      "id": "8e170f46-ac99-414b-9326-782c16287f77",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enroll and report\nConfirmed emails join the campaign. Every row gets its status in the sheet.",
+        "height": 480,
+        "width": 700,
+        "color": 7
+      },
+      "id": "30b93d58-6241-4e70-abe3-61b40dc53413",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "6310969c-fc2f-4abf-8167-a9857b6fa75a",
+      "name": "New row",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a12ba2de-3233-42c8-82c6-ef4855281693",
+              "leftValue": "={{ $json.first_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "838fd190-68d6-4674-83c9-64fe46969949",
+              "leftValue": "={{ $json.last_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "eaa0461f-a29d-4f6d-a8ad-9690b70f05ef",
+              "leftValue": "={{ $json.domain }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3bd3c9ec-f632-40b8-b070-d2f860f08d4b",
+      "name": "Has name and domain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "find",
+        "firstName": "={{ $json.first_name }}",
+        "lastName": "={{ $json.last_name }}",
+        "domain": "={{ $json.domain }}"
+      },
+      "id": "258c99cf-81fc-4d40-974c-f96c351a1090",
+      "name": "Find work email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c5b0dda1-56e8-4bc2-8816-f72ee0111c3f",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e2044193-890a-4c6f-a042-2a9f8b6ad2d1",
+      "name": "Confirmed email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('New row').item.json.first_name }}",
+          "last_name": "={{ $('New row').item.json.last_name }}",
+          "company": "={{ $('New row').item.json.company }}"
+        },
+        "extraColumns": {},
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "2882a24d-26fd-4464-942e-e5dc30b04955",
+      "name": "Add to campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "167dffe7-8e39-4b44-8174-ba0102721d2d",
+              "name": "row_number",
+              "value": "={{ $('New row').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "d9ff9619-df76-4a06-b489-4ff0440e3d0b",
+              "name": "email",
+              "value": "={{ $('Find work email').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "704909c1-9309-4f52-800e-f68e47a8f2bc",
+              "name": "status",
+              "value": "={{ ($json.inserted || 0) > 0 ? 'added to campaign' : 'sent to campaign: ' + ($json.summary || 'joins after the email check') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3f0a62b6-b7f1-439f-b8a8-225fa1a53b65",
+      "name": "Result: added",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bae03b2f-29bc-4696-b62f-d4e9c35f06b6",
+              "name": "row_number",
+              "value": "={{ $('New row').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "06d78c27-fe07-4992-8809-eb6cf43d96c1",
+              "name": "email",
+              "value": "={{ $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "48b19ce5-6819-4f13-8d67-34813ee6687c",
+              "name": "status",
+              "value": "={{ $json.status === 'catch_all' ? 'not confirmed (domain accepts every address)' : 'no email found' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e72e07b6-5a75-44dc-98aa-cc88c5831b8b",
+      "name": "Result: not added",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "0e282b53-0db3-4361-a09b-8d4e7e848615",
+      "name": "Write back the result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "New row": {
+      "main": [
+        [
+          {
+            "node": "Has name and domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has name and domain?": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Confirmed email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmed email?": {
+      "main": [
+        [
+          {
+            "node": "Add to campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result: not added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to campaign": {
+      "main": [
+        [
+          {
+            "node": "Result: added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: added": {
+      "main": [
+        [
+          {
+            "node": "Write back the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result: not added": {
+      "main": [
+        [
+          {
+            "node": "Write back the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

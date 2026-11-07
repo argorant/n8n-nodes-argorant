@@ -1,0 +1,241 @@
+{
+  "name": "Email a weekly report of every active Argorant campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Email a weekly report of every active Argorant campaign\n\n### How it works\nOne email on Monday morning with the numbers that matter. The workflow lists your active campaigns, reads the last 7 days of each one and builds a table: emails sent, replies, reply rate, positive replies and bounce rate. The reply rate counts every reply, out of office included, as Argorant reports it. Campaigns with a bounce rate above the limit in Settings are flagged so you check their mailboxes and lists.\n\nNo credits are used and no webhooks are needed, so it works on every plan.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Put the recipient and the bounce limit into **Settings**.\n4. Add a Gmail credential to **Email the report** and activate.\n\n### Customization\nChange the window in **Last 7 days**, or post the table to your team chat.",
+        "height": 541,
+        "width": 520,
+        "color": 1
+      },
+      "id": "ffd25640-1540-446c-ba8d-c20bf878041a",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Numbers\nSeven days of results for every active campaign.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "a02a9623-17ff-464a-897d-3941250a22e9",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Report\nOne table, flags above your bounce limit.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "e7b2c205-0ed5-4fc2-9237-a714f834a031",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "813cbe17-7494-453f-94f1-9c1a8643013c",
+      "name": "Every Monday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b523f2c0-9e1f-492d-ba8b-bcb2b0f3fce3",
+              "name": "report_to",
+              "value": "alex.rivera@yourcompany.example",
+              "type": "string"
+            },
+            {
+              "id": "e977a403-9fef-4999-ac4b-a1b291d650d8",
+              "name": "bounce_limit_pct",
+              "value": "3",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3c62b6f7-8e82-4d0b-9652-a96b5fcf5b43",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getMany",
+        "campaignFilters": {
+          "status": "active"
+        },
+        "returnAll": true,
+        "simplify": true
+      },
+      "id": "20daef97-17a0-4015-90aa-38f9934e29bb",
+      "name": "Active campaigns",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getStats",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "days": 7
+      },
+      "id": "bc4d60ee-03e6-4d5b-a92d-efc7bd613b2f",
+      "name": "Last 7 days",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Settings').first().json;\nconst camps = $('Active campaigns').all().map(i => i.json);\nconst rows = $input.all().map((item, i) => ({ name: camps[i]?.name || item.json.campaign_id, ...(item.json.totals || {}) }));\nconst pct = v => (v === null || v === undefined) ? '-' : `${Number(v).toFixed(1)}%`;\nconst tr = rows.map(r => `<tr><td>${r.name}</td><td>${r.sent ?? 0}</td><td>${r.replies ?? 0}</td><td>${pct(r.reply_rate)}</td><td>${r.positive ?? 0}</td><td>${pct(r.bounce_rate)}${Number(r.bounce_rate) > cfg.bounce_limit_pct ? ' (check)' : ''}</td></tr>`).join('');\nconst html = `<p>Last 7 days, ${rows.length} active campaign(s).</p><table border=\"1\" cellpadding=\"4\"><tr><th>Campaign</th><th>Sent</th><th>Replies</th><th>Reply rate</th><th>Positive</th><th>Bounce rate</th></tr>${tr}</table>`;\nreturn [{ json: { to: cfg.report_to, html, campaigns: rows.length } }];"
+      },
+      "id": "ff23544c-6bd7-4d5b-9c70-9db66202f7cb",
+      "name": "Build the report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "=Argorant weekly report: {{ $json.campaigns }} active campaign(s)",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "47d13f75-ce8d-43bf-8815-88796bf4f4ae",
+      "name": "Email the report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Active campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Active campaigns": {
+      "main": [
+        [
+          {
+            "node": "Last 7 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 7 days": {
+      "main": [
+        [
+          {
+            "node": "Build the report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the report": {
+      "main": [
+        [
+          {
+            "node": "Email the report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

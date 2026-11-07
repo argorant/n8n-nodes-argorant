@@ -1,0 +1,382 @@
+{
+  "name": "Qualify inbound leads and route them to the right campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Qualify inbound leads and route them to the right campaign\n\n### How it works\nGive every inbound signup the right next step within seconds. A POST with an email starts the workflow. Argorant enriches the address (name, title, seniority, company) and reads the company (size, country). The scoring step compares them with your ideal customer profile in Settings: allowed seniorities, minimum employees and countries. Good fits go into your sales campaign, everyone else into nurture, and the webhook answers with the score so your app can show the right page.\n\nCosts: 1 credit per enriched person found; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Edit **Settings**: seniorities, min_employees and countries of your ideal customer.\n4. Pick the campaigns in **Add to sales campaign** and **Add to nurture campaign**.\n5. POST JSON like {\"email\": \"maya.chen@linfield.example\"} to the production URL of **New signup**.\n\n### Customization\nChange the scoring rules in **Score the fit**, or add a CRM step after the routing.",
+        "height": 643,
+        "width": 520,
+        "color": 1
+      },
+      "id": "01c74386-0ec1-416f-9a58-6c7decc5eece",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Know who signed up\nPerson and company from Argorant. Enrich costs 1 credit when found.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "ecc7f498-1eaf-434a-b91c-449f420efefa",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Score and route\nYour profile in Settings decides: sales campaign or nurture.",
+        "height": 500,
+        "width": 700,
+        "color": 7
+      },
+      "id": "d6bc60a6-3cd4-4dc7-a165-0f08ba870b3c",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "argorant-inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "650942c8-7195-441e-8b5b-b48ad634cd1d",
+      "name": "New signup",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "4e137a7f-c2bc-4004-a639-3ef5d05d5188"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0591a0b7-c2fa-4f15-9215-310a4aa000e9",
+              "name": "seniorities",
+              "value": "C-Level,VP,Director,Owner,Founder",
+              "type": "string"
+            },
+            {
+              "id": "cb58fb00-0a18-496e-9230-0119d13a33c1",
+              "name": "min_employees",
+              "value": "50",
+              "type": "number"
+            },
+            {
+              "id": "6e159208-e0f0-4350-9a80-44aff501e0d1",
+              "name": "countries",
+              "value": "United States,Canada,United Kingdom",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "948be404-ebda-4acc-b66d-346fce3a342d",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.body.email }}",
+        "simplify": true
+      },
+      "id": "0a052684-9e50-4533-972b-4af076a3d19f",
+      "name": "Enrich the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "get",
+        "domain": "={{ $json.company_domain || $('New signup').item.json.body.email.split('@')[1] }}",
+        "previewLimit": 1,
+        "simplify": true
+      },
+      "id": "a7fe4370-19db-43be-ac13-8f53b7f48626",
+      "name": "Get the company",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst p = $('Enrich the person').first().json;\nconst c = $input.first().json;\nconst seniorities = s.seniorities.split(',').map(x => x.trim().toLowerCase());\nconst countries = s.countries.split(',').map(x => x.trim().toLowerCase());\nlet score = 0; const reasons = [];\nif (p.found && seniorities.includes(String(p.seniority || '').toLowerCase())) { score += 40; reasons.push('seniority'); }\nif (Number(c.employee_count || 0) >= Number(s.min_employees)) { score += 35; reasons.push('company size'); }\nif (countries.includes(String(c.country || p.country || '').toLowerCase())) { score += 25; reasons.push('country'); }\nreturn [{ json: { email: $('New signup').first().json.body.email, first_name: p.first_name || '', last_name: p.last_name || '',\n  company: p.company || c.company_name || '', title: p.title || '', score, reasons, fit: score >= 60 } }];"
+      },
+      "id": "f11b35c1-cb70-428b-a548-fc4a06e2cc98",
+      "name": "Score the fit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fe7dce72-77ee-49e3-afaa-e77009a79666",
+              "leftValue": "={{ $json.fit }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4c7ffa0-9140-4860-af24-8a8e7075c0d0",
+      "name": "Good fit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}",
+          "title": "={{ $json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "source",
+              "value": "inbound"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "36c88126-3629-413b-a360-09e81f39f3e8",
+      "name": "Add to sales campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}",
+          "title": "={{ $json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "source",
+              "value": "inbound"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "2fd31a97-4489-472c-8fe8-496be115564c",
+      "name": "Add to nurture campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { email: $('Score the fit').item.json.email, score: $('Score the fit').item.json.score, fit: $('Score the fit').item.json.fit } }}",
+        "options": {}
+      },
+      "id": "17731409-8356-4626-9e86-a614f7b01f71",
+      "name": "Answer the caller",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New signup": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Enrich the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich the person": {
+      "main": [
+        [
+          {
+            "node": "Get the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the company": {
+      "main": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the fit": {
+      "main": [
+        [
+          {
+            "node": "Good fit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Good fit?": {
+      "main": [
+        [
+          {
+            "node": "Add to sales campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to nurture campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to sales campaign": {
+      "main": [
+        [
+          {
+            "node": "Answer the caller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to nurture campaign": {
+      "main": [
+        [
+          {
+            "node": "Answer the caller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

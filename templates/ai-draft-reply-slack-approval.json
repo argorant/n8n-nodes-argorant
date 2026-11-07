@@ -1,0 +1,331 @@
+{
+  "name": "Draft answers to interested replies with AI and send them after Slack approval",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Draft answers to interested replies with AI and send them after Slack approval\n\n### How it works\nAnswer interested prospects within minutes, with a human in the loop. The trigger adds the conversation ID to every interested reply. The workflow reads the whole thread and asks your own AI model for a short, plain answer that proposes a next step with the calendar link from Settings. Slack shows the draft with Send and Don't send buttons and waits. Only Send sends the answer from Argorant, in the same thread. Don't send ends the run and nothing goes out.\n\nArgorant replies are free. Your model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Put your name and calendar link into **Settings**.\n5. Pick a chat model in **Chat model** (any chat model node works).\n6. Add a Slack credential and the channel or user in **Ask for approval in Slack**.\n\n### Customization\nChange the tone in **Draft the answer**, or approve by email with the send and wait operation of an email node.",
+        "height": 687,
+        "width": 520,
+        "color": 1
+      },
+      "id": "0ad80733-a5fb-4291-9874-f5e57c329ce6",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft\nYour own model writes from the whole thread. Any chat model node works.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "3108db52-28ad-419f-8c22-910f15ad5e69",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Approve and send\nNothing is sent without a click on Send in Slack.",
+        "height": 380,
+        "width": 700,
+        "color": 7
+      },
+      "id": "0fc6f750-988f-42a1-834c-6f46d94ca40a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Warning\nSends the email at once from the mailbox that received the reply.",
+        "height": 190,
+        "width": 240,
+        "color": 3
+      },
+      "id": "26baabb2-5840-4bbe-8426-8bab24bfff17",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1370,
+        50
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "50978cf6-8e55-4039-9b66-ea51c4a4e035",
+      "name": "Interested reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "d7064af5-72a6-4450-846e-ea6018fd0131"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2038d62e-a8ce-4cd6-93af-b8761170eb5e",
+              "name": "sender_name",
+              "value": "Alex Rivera",
+              "type": "string"
+            },
+            {
+              "id": "7723ac90-b998-46cb-bc91-b1ecd0d0cfc9",
+              "name": "calendar_link",
+              "value": "https://cal.example.com/alex-rivera/20min",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "236b23d4-9a32-4e77-a939-c53cbc839d4d",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "get",
+        "conversationId": "={{ $json.conversation_id }}",
+        "simplify": true
+      },
+      "id": "09784239-bfc2-4e0e-b5ce-38afbf451159",
+      "name": "Read the thread",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a short reply (under 80 words, plain text, no subject line) to this interested prospect. Thank them in one sentence, answer their question if they asked one, and propose a 20 minute call with this link: {{ $('Settings').item.json.calendar_link }}. Sign as {{ $('Settings').item.json.sender_name }}. Do not invent facts.\n\nTheir reply:\n{{ $json.body }}"
+      },
+      "id": "3c9ad431-6298-4622-91a5-786a3591af40",
+      "name": "Draft the answer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "d39cd76f-0f7e-491b-929a-54eb163652b9",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "message": "=Reply from {{ $('Interested reply').item.json.lead_email }}:\n> {{ $('Read the thread').item.json.body }}\n\nDraft answer:\n{{ $json.text }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Send",
+            "disapproveLabel": "Don't send"
+          }
+        },
+        "options": {}
+      },
+      "id": "204a1cbe-55ea-44c2-9f53-b338ff14d3e4",
+      "name": "Ask for approval in Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "274f59e1-a7b0-4475-a037-0eb88059312d",
+              "leftValue": "={{ $json.data.approved }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ac673e2f-c6d5-468e-8623-3ca47d30b680",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "reply",
+        "conversationId": "={{ $('Interested reply').item.json.conversation_id }}",
+        "body": "={{ $('Draft the answer').item.json.text }}"
+      },
+      "id": "87060c5a-1276-41d1-9248-589a54706310",
+      "name": "Send the answer",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Interested reply": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read the thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the thread": {
+      "main": [
+        [
+          {
+            "node": "Draft the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft the answer": {
+      "main": [
+        [
+          {
+            "node": "Ask for approval in Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for approval in Slack": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft the answer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Send the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

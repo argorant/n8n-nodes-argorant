@@ -1,0 +1,361 @@
+{
+  "name": "Stop all outreach to a company when its HubSpot deal is won",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Stop all outreach to a company when its HubSpot deal is won\n\n### How it works\nNew customers should never get a cold email. The HubSpot Trigger fires when a deal stage changes. If the new stage is Closed won, the workflow reads the deal's contacts, gets their emails and adds each address to the Argorant blocklist. A blocked address leaves every running campaign at once and is never added again. With block_domain on, the whole company domain is blocked too, so colleagues are skipped as well.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a HubSpot credential to **Deal stage changed**, **Get deal contacts** and **Get contact email**.\n4. In **Settings**, check won_stage (closedwon in the default pipeline) and block_domain.\n5. Activate the workflow.\n\n### Customization\nUse a different stage, or post a note to your team chat after the block.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "dc5bff0f-6d38-40a7-89af-262b9ccefda9",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read the deal\nOnly Closed won deals go on. Their contacts are read from HubSpot.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "40699ecc-0390-4406-a9b1-95a6eb1ed06c",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Stop outreach\nA blocked address leaves every campaign at once. Domains only when block_domain is on.",
+        "height": 380,
+        "width": 700,
+        "color": 7
+      },
+      "id": "dd8b4571-e98c-47b5-83b1-219584bb8ec7",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "eventsUi": {
+          "eventValues": [
+            {
+              "name": "deal.propertyChange",
+              "property": "dealstage"
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "0c1ee129-25f5-4fdf-a1a3-7b0475b89931",
+      "name": "Deal stage changed",
+      "type": "n8n-nodes-base.hubspotTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "43408efd-e9eb-4a92-b846-603ef52c1aa2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48ab9445-85e7-49dd-9194-967e27c76730",
+              "name": "won_stage",
+              "value": "closedwon",
+              "type": "string"
+            },
+            {
+              "id": "9c024a2d-f665-436a-98df-f9f00ee70c7e",
+              "name": "block_domain",
+              "value": "false",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "74842153-3498-43de-9d95-fd65f7e65a55",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fda389e9-8307-4b68-9a4e-5b549860ca1c",
+              "leftValue": "={{ $json.propertyValue }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "={{ $json.won_stage }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "21252c3c-d304-4136-a013-cb946339a87e",
+      "name": "Deal won?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hubapi.com/crm/v4/objects/deals/{{ $json.objectId }}/associations/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "options": {}
+      },
+      "id": "bde200db-3139-4bea-9821-55956f5c02be",
+      "name": "Get deal contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "id": "1a0a82bb-fec1-4bd4-a4f9-d16ad9379be5",
+      "name": "One item per contact",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "get",
+        "contactId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.toObjectId }}"
+        },
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "email"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "id": "bf170eed-13b2-48b8-ae9e-025302292c91",
+      "name": "Get contact email",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "blocklist",
+        "operation": "add",
+        "value": "={{ $json.properties.email.value }}",
+        "reason": "customer: deal won"
+      },
+      "id": "a060d676-25b6-4918-be36-15b9df93ba15",
+      "name": "Block the address",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0684d939-9f47-4af0-b5ef-fc27c21e2716",
+              "leftValue": "={{ $('Settings').first().json.block_domain }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "be13f907-efc3-4a7c-88f5-aeeb0c9fce5c",
+      "name": "Block the domain too?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "blocklist",
+        "operation": "add",
+        "value": "={{ $('Get contact email').item.json.properties.email.value.split('@')[1] }}",
+        "reason": "customer company: deal won"
+      },
+      "id": "dd9eb44c-c652-4abf-b557-a68f7e9b7a5e",
+      "name": "Block the domain",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Deal stage changed": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Deal won?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deal won?": {
+      "main": [
+        [
+          {
+            "node": "Get deal contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get deal contacts": {
+      "main": [
+        [
+          {
+            "node": "One item per contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per contact": {
+      "main": [
+        [
+          {
+            "node": "Get contact email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get contact email": {
+      "main": [
+        [
+          {
+            "node": "Block the address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block the address": {
+      "main": [
+        [
+          {
+            "node": "Block the domain too?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block the domain too?": {
+      "main": [
+        [
+          {
+            "node": "Block the domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
