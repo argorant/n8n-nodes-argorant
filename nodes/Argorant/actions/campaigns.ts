@@ -52,12 +52,12 @@ export function stepsBody(values: IDataObject): IDataObject[] {
 }
 
 function blockerText(blocker: unknown): string {
-	if (typeof blocker === 'string') return blocker;
+	if (typeof blocker === 'string') return blocker.replace(/[.\s]+$/, '');
 	if (blocker && typeof blocker === 'object') {
 		const b = blocker as IDataObject;
-		return String(b.message ?? b.summary ?? b.reason ?? b.code ?? JSON.stringify(b));
+		return String(b.message ?? b.summary ?? b.reason ?? b.code ?? JSON.stringify(b)).replace(/[.\s]+$/, '');
 	}
-	return String(blocker);
+	return String(blocker).replace(/[.\s]+$/, '');
 }
 
 async function senders(this: IExecuteFunctions, i: number, id: string): Promise<IDataObject | undefined> {
