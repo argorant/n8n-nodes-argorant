@@ -16,7 +16,7 @@ export const emailDescription: INodeProperties[] = [
 				value: 'check',
 				action: 'Check an email address',
 				description:
-					'Check whether an email address can receive mail: valid, invalid, catch_all, risky or unknown. Half a credit per fresh check.',
+					'Check whether an email address can receive mail: valid, invalid, catch_all, risky or unknown. A fresh check costs 1 credit; an address checked recently is free.',
 				routing: {
 					request: { method: 'POST', url: '/api/mcp/email/verify' },
 				},
