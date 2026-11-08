@@ -1,0 +1,450 @@
+{
+  "name": "Find lookalikes of your won customers every week",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Find lookalikes of your won customers every week\n\n### How it works\nYour best customers describe your next ones. Every Monday the workflow reads up to max_customers domains from your won customers sheet and looks up each company in Argorant. It picks the most common industry and size band among them, then searches companies with that profile in your country. Customers and companies found in earlier weeks are left out, and the new ones are appended to your lookalikes sheet with name, domain, industry, size and city.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with a company_domain column for your customers and one with the columns date, company, domain, industry, size, city for the results.\n4. Pick them in **Won customers** and **Append the lookalikes**.\n5. Set country, max_customers and max_results in **Settings** and activate.\n\n### Customization\nSearch by keywords of your customers instead of the industry, or send the list to your team chat.",
+        "height": 643,
+        "width": 520,
+        "color": 1
+      },
+      "id": "d7b2a3b4-c385-459d-996d-68c7c2ffdf28",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Learn from customers\nIndustry and size of your won accounts, looked up for free.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "9a762499-5412-4e17-a427-c71ae1e814a7",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find lookalikes\nSame profile, not yet a customer, new this week.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "1c2ff4ee-777e-413d-a826-7ff234b465ea",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "0ebbc68c-0260-4bc4-a9a3-646320d702e0",
+      "name": "Every Monday at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "96b6f205-7a86-4e07-ae8f-b3cd92fac6a1",
+              "name": "country",
+              "value": "United States",
+              "type": "string"
+            },
+            {
+              "id": "f1c6756f-d275-431e-a56b-ef9fa150028c",
+              "name": "max_customers",
+              "value": "10",
+              "type": "number"
+            },
+            {
+              "id": "2f8d5d05-9781-422f-9fb6-7d7f8679dec0",
+              "name": "max_results",
+              "value": "25",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4cf1437b-4bc9-4405-bf62-28d0f91744e1",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "id": "95c93a4c-96a6-4787-b325-44cb4315c7f0",
+      "name": "Won customers",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_customers }}"
+      },
+      "id": "7246a597-a3cc-4b35-bf84-bc6cd3f11caf",
+      "name": "Cap customers",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "get",
+        "domain": "={{ $json.company_domain }}",
+        "previewLimit": 1,
+        "simplify": true
+      },
+      "id": "4e9db9e4-3474-4b8c-88a4-f6d851af7d06",
+      "name": "Look up each customer",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(c => c.found);\nif (!rows.length) return [];\nconst top = key => { const n = {}; for (const r of rows) if (r[key]) n[r[key]] = (n[r[key]] || 0) + 1;\n  return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] || ''; };\nconst size = top('employee_range').replace(/,/g, '');\nreturn [{ json: { industry: top('industry'), employee_range: size, known: $('Won customers').all().map(i => String(i.json.company_domain || '').toLowerCase()) } }];"
+      },
+      "id": "b1215546-81cb-4745-90e8-98b0b40d7416",
+      "name": "Most common profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "search",
+        "filters": {
+          "industries": "={{ [$json.industry] }}",
+          "employeeRange": "={{ $json.employee_range ? [$json.employee_range] : [] }}",
+          "country": "={{ [$('Settings').first().json.country] }}"
+        },
+        "returnAll": false,
+        "limit": "={{ $('Settings').first().json.max_results }}",
+        "simplify": true
+      },
+      "id": "4e254558-2455-4d64-bd2f-ac6ee2c9503e",
+      "name": "Search lookalikes",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "02727b49-998a-435b-93c6-91e90ade54c5",
+              "leftValue": "={{ $('Most common profile').first().json.known.includes(($json.company_domain || '').toLowerCase()) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3b1dad39-7371-406c-879a-8480aadedbdf",
+      "name": "Not a customer",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.company_domain }}",
+        "options": {}
+      },
+      "id": "9aced50a-432e-4260-95da-53b0e428b6c2",
+      "name": "New this week",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISODate() }}",
+            "company": "={{ $json.company_name }}",
+            "domain": "={{ $json.company_domain }}",
+            "industry": "={{ $json.industry }}",
+            "size": "={{ $json.employee_range }}",
+            "city": "={{ $json.city }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "size",
+              "displayName": "size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1c529ad5-f38e-4a5b-b511-2f869f8931c9",
+      "name": "Append the lookalikes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2160,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Won customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Won customers": {
+      "main": [
+        [
+          {
+            "node": "Cap customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap customers": {
+      "main": [
+        [
+          {
+            "node": "Look up each customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up each customer": {
+      "main": [
+        [
+          {
+            "node": "Most common profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Most common profile": {
+      "main": [
+        [
+          {
+            "node": "Search lookalikes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search lookalikes": {
+      "main": [
+        [
+          {
+            "node": "Not a customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not a customer": {
+      "main": [
+        [
+          {
+            "node": "New this week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New this week": {
+      "main": [
+        [
+          {
+            "node": "Append the lookalikes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,292 @@
+{
+  "name": "Enrich every new Salesforce lead with title, company size and industry",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich every new Salesforce lead with title, company size and industry\n\n### How it works\nFill in your Salesforce leads before a rep opens them. The Salesforce Trigger checks for new leads every minute. Leads with an email (at most max_per_poll at a time) go to Argorant: Enrich finds the person behind the address with title and profile URL, and the company lookup on the email domain adds industry, headcount, city and website. The lead is updated in place; a value your team already entered is never overwritten.\n\nCosts: 1 credit per person found whose email passes the check. Misses, repeats and company lookups are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Salesforce credential to **New Salesforce lead** and **Update the lead**.\n4. Set max_per_poll in **Settings** and activate.\n\n### Customization\nMap more fields in **Update the lead**, or skip leads from free mail domains with a filter.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "8e7375c3-eff4-4351-ac3d-5a6ebd623817",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## New leads\nEvery new lead with an email, at most max_per_poll at a time.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "c7e6f64a-4b80-4d30-9ebb-8bda44e89764",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enrich\nPerson by email (1 credit when found with a passing email), company by domain (free).",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "6e91fd4a-d1d0-4a48-886b-ec4c7899e530",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Write back\nOnly empty fields are filled.",
+        "height": 280,
+        "width": 260,
+        "color": 7
+      },
+      "id": "49b96447-e1de-49b0-ad40-e5ef749db254",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "triggerOn": "leadCreated",
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "id": "78a8d262-0b41-4317-9576-444b8146f1e1",
+      "name": "New Salesforce lead",
+      "type": "n8n-nodes-base.salesforceTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dc8b582b-4fd0-4721-b7f3-fd939bbf1285",
+              "name": "max_per_poll",
+              "value": "20",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8eee2143-76f0-4aa0-a7a4-c24ed40f34d0",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c24c3901-c956-4ca4-b80b-63ff9c6e20f9",
+              "leftValue": "={{ $('New Salesforce lead').item.json.Email }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "77da60c1-7d5f-4531-911d-e1141597fe36",
+      "name": "Leads with an email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_per_poll }}"
+      },
+      "id": "39cd9e4b-0ca0-49c3-a23c-d9fb12039e48",
+      "name": "Cap per poll",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $('New Salesforce lead').item.json.Email }}",
+        "simplify": true
+      },
+      "id": "407fa941-cdc9-42a7-8c2e-9d53f2cdf34b",
+      "name": "Enrich the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "get",
+        "domain": "={{ $('New Salesforce lead').item.json.Email.split('@')[1] }}",
+        "previewLimit": 1,
+        "simplify": true
+      },
+      "id": "397a6ff7-5a65-49f4-8545-893a784ddd84",
+      "name": "Look up the company",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "update",
+        "leadId": "={{ $('New Salesforce lead').item.json.Id }}",
+        "updateFields": {
+          "title": "={{ $('New Salesforce lead').item.json.Title || $('Enrich the person').item.json.title || '' }}",
+          "industry": "={{ $('New Salesforce lead').item.json.Industry || $json.industry || '' }}",
+          "numberOfEmployees": "={{ $('New Salesforce lead').item.json.NumberOfEmployees || $json.employee_count || 0 }}",
+          "city": "={{ $('New Salesforce lead').item.json.City || $json.city || '' }}",
+          "website": "={{ $('New Salesforce lead').item.json.Website || $json.company_domain || '' }}",
+          "description": "={{ $('Enrich the person').item.json.linkedin_url ? 'Profile: ' + $('Enrich the person').item.json.linkedin_url : '' }}"
+        }
+      },
+      "id": "de19b20a-55b0-49f7-b7e3-244149e2d7f3",
+      "name": "Update the lead",
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New Salesforce lead": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Leads with an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads with an email": {
+      "main": [
+        [
+          {
+            "node": "Cap per poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per poll": {
+      "main": [
+        [
+          {
+            "node": "Enrich the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich the person": {
+      "main": [
+        [
+          {
+            "node": "Look up the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up the company": {
+      "main": [
+        [
+          {
+            "node": "Update the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

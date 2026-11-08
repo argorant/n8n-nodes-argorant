@@ -1,0 +1,449 @@
+{
+  "name": "Save the founders and finance leaders of newly funded companies as a list",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Save the founders and finance leaders of newly funded companies as a list\n\n### How it works\nFresh money means new budgets. Every hour the workflow reads your funding news feed and keeps items that mention a round. Your own AI model extracts the company name and website domain. Argorant previews the people with the titles in Settings at that domain, at most people_per_company each, and saves all of them in one list named after the date. A Slack message lists the companies and links the list, so your team can review it and add it to a campaign.\n\nCosts: previews and the list are free. Your chat model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Paste your feed URL into **Funding news**.\n4. Pick a chat model in **Chat model** (any chat model node works).\n5. Set titles, people_per_company and max_companies in **Settings**, pick the channel in **Tell the team** and activate.\n\n### Customization\nAdd the list to a campaign automatically with Campaign > Add Leads.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "40a32b81-cf52-44e6-8a45-150bf3666d29",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Spot rounds\nKeyword filter and a cap per run.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "684a01ae-4974-4ad6-bdfb-b424f6d3bdd9",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Understand the news\nYour own model extracts company and domain. Any chat model node works.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "ec5e3e11-da0a-41f9-8ce7-8cd7be81888d",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find and save\nFree preview by title, one list per run, a note to the team.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "218e6ba1-d5d3-4225-8639-caa1f2d287fd",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "feedUrl": "https://example.com/funding-news.rss"
+      },
+      "id": "379f5058-0732-4915-a38e-4ae00446c600",
+      "name": "Funding news",
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "11e6ede0-9bc3-4974-aba3-a1e025ebb6b2",
+              "name": "titles",
+              "value": "CEO, founder, co-founder, CFO, head of finance",
+              "type": "string"
+            },
+            {
+              "id": "e93c8308-071d-4c57-9b17-cf88c57134f4",
+              "name": "people_per_company",
+              "value": "3",
+              "type": "number"
+            },
+            {
+              "id": "33b0933f-bc3c-43dc-953f-4fcb2ba414c2",
+              "name": "max_companies",
+              "value": "5",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "e6932258-f002-4864-99ec-a28f71e44e2b",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fc2e5743-ab44-4a63-b8c7-1e76d19bede4",
+              "leftValue": "={{ ($json.title || '') + ' ' + ($json.contentSnippet || '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              },
+              "rightValue": "/(raises|raised|funding|series [a-e]|seed round|investment)/i"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1a14bec2-3383-4818-889e-01bd722a4ed2",
+      "name": "Funding rounds only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_companies }}"
+      },
+      "id": "b1b466e7-0dbf-4401-a0bd-d199fdffcc35",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.title }}\n{{ $json.contentSnippet }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "company_name",
+              "description": "The company that raised the money",
+              "required": true
+            },
+            {
+              "name": "company_domain",
+              "description": "The company website domain, for example linfield.example. Empty if not in the text."
+            },
+            {
+              "name": "round",
+              "description": "The round, for example Seed or Series A"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0d3a8cdb-5419-405a-b286-c405cea64cca",
+      "name": "Extract the company",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "e23fd222-7dd7-49cd-aeb2-b38a2c831546",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2fa41357-39a8-4ba9-9219-d605e651ff65",
+              "leftValue": "={{ $json.output.company_domain }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1d060cfd-955b-42f5-9b08-a32876334b38",
+      "name": "Has a domain?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "companyDomain": "={{ $json.output.company_domain }}",
+          "title": "={{ $('Settings').first().json.titles }}"
+        },
+        "limit": "={{ $('Settings').first().json.people_per_company }}",
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "e4ac2f94-6f94-4824-884b-206cddc092af",
+      "name": "Find founders and finance leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const people = $input.all().map(i => i.json).filter(p => p.record_id);\nconst companies = [...new Set(people.map(p => p.company).filter(Boolean))];\nreturn people.length ? [{ json: { record_ids: people.map(p => p.record_id).join(','), people: people.length, companies: companies.join(', ') } }] : [];"
+      },
+      "id": "7e9d8eb0-066a-478e-b80c-b7e2af7b3afb",
+      "name": "Collect",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Funding news {{ $now.toISODate() }}",
+        "peopleSource": "recordIds",
+        "recordIds": "={{ $json.record_ids }}",
+        "simplify": true
+      },
+      "id": "090bd0e6-da7a-4863-a13c-5b384540450f",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=New funding rounds: {{ $('Collect').item.json.companies }}. {{ $('Collect').item.json.people }} founders and finance leaders saved in the list {{ $json.name }}: {{ $json.url }}",
+        "otherOptions": {}
+      },
+      "id": "5cb6a88a-e262-400c-aa14-81ddc1495dff",
+      "name": "Tell the team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Funding news": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Funding rounds only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Funding rounds only": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Extract the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract the company": {
+      "main": [
+        [
+          {
+            "node": "Has a domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a domain?": {
+      "main": [
+        [
+          {
+            "node": "Find founders and finance leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find founders and finance leaders": {
+      "main": [
+        [
+          {
+            "node": "Collect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Tell the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract the company",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
