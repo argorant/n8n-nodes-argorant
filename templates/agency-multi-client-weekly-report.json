@@ -1,0 +1,430 @@
+{
+  "name": "Agency report: weekly results of every client's Argorant workspace in one sheet",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Agency report: weekly results of every client's Argorant workspace in one sheet\n\n### How it works\nOne sheet for all your clients, updated every Monday. Each client branch uses that client's own Argorant credential, so their data never mixes. A branch lists the client's active campaigns, reads 7 days of results per campaign and tags each row with the client name. The rows are merged and appended to one Google Sheet: date, client, campaign, sent, replies, reply rate, positive replies and bounce rate. The template has two client branches; copy a branch for each additional client and connect it to the merge.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add one **Argorant API** credential per client (each client's key from their Argorant Settings, API keys) and pick it in that client's two nodes.\n3. Set each client's name in its **Name client** node.\n4. Create a sheet with the columns date, client, campaign, sent, replies, reply_rate, positive, bounce_rate and pick it in **Append to the report**.\n5. Activate.\n\n### Customization\nAdd a team chat summary, or a column with the credits left (Account > Get).",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "79b376dc-778f-4f55-8b2b-8387a45d64d6",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Client A\nUses Client A's own Argorant credential.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "e9e76a19-cda5-4c9c-b0d6-6002a62d944d",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Client B\nUses Client B's own credential. Copy this branch for more clients.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "b7f4097b-22e2-4978-b79e-79c107fe348a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "379f5058-0732-4915-a38e-4ae00446c600",
+      "name": "Every Monday at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getMany",
+        "campaignFilters": {
+          "status": "active"
+        },
+        "returnAll": true,
+        "simplify": true
+      },
+      "id": "11e6ede0-9bc3-4974-aba3-a1e025ebb6b2",
+      "name": "Client A: active campaigns",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getStats",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "days": 7
+      },
+      "id": "e93c8308-071d-4c57-9b17-cf88c57134f4",
+      "name": "Client A: last 7 days",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "33b0933f-bc3c-43dc-953f-4fcb2ba414c2",
+              "name": "client",
+              "value": "Client A",
+              "type": "string"
+            },
+            {
+              "id": "e6932258-f002-4864-99ec-a28f71e44e2b",
+              "name": "date",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "fc2e5743-ab44-4a63-b8c7-1e76d19bede4",
+              "name": "campaign",
+              "value": "={{ $('Client A: active campaigns').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "1a14bec2-3383-4818-889e-01bd722a4ed2",
+              "name": "sent",
+              "value": "={{ $json.totals.sent }}",
+              "type": "number"
+            },
+            {
+              "id": "b1b466e7-0dbf-4401-a0bd-d199fdffcc35",
+              "name": "replies",
+              "value": "={{ $json.totals.replies }}",
+              "type": "number"
+            },
+            {
+              "id": "0d3a8cdb-5419-405a-b286-c405cea64cca",
+              "name": "reply_rate",
+              "value": "={{ $json.totals.reply_rate }}",
+              "type": "number"
+            },
+            {
+              "id": "e23fd222-7dd7-49cd-aeb2-b38a2c831546",
+              "name": "positive",
+              "value": "={{ $json.totals.positive }}",
+              "type": "number"
+            },
+            {
+              "id": "2fa41357-39a8-4ba9-9219-d605e651ff65",
+              "name": "bounce_rate",
+              "value": "={{ $json.totals.bounce_rate }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d060cfd-955b-42f5-9b08-a32876334b38",
+      "name": "Name client A",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getMany",
+        "campaignFilters": {
+          "status": "active"
+        },
+        "returnAll": true,
+        "simplify": true
+      },
+      "id": "e4ac2f94-6f94-4824-884b-206cddc092af",
+      "name": "Client B: active campaigns",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "getStats",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "days": 7
+      },
+      "id": "7e9d8eb0-066a-478e-b80c-b7e2af7b3afb",
+      "name": "Client B: last 7 days",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "090bd0e6-da7a-4863-a13c-5b384540450f",
+              "name": "client",
+              "value": "Client B",
+              "type": "string"
+            },
+            {
+              "id": "5cb6a88a-e262-400c-aa14-81ddc1495dff",
+              "name": "date",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "684a01ae-4974-4ad6-bdfb-b424f6d3bdd9",
+              "name": "campaign",
+              "value": "={{ $('Client B: active campaigns').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "ec5e3e11-da0a-41f9-8ce7-8cd7be81888d",
+              "name": "sent",
+              "value": "={{ $json.totals.sent }}",
+              "type": "number"
+            },
+            {
+              "id": "218e6ba1-d5d3-4225-8639-caa1f2d287fd",
+              "name": "replies",
+              "value": "={{ $json.totals.replies }}",
+              "type": "number"
+            },
+            {
+              "id": "40a32b81-cf52-44e6-8a45-150bf3666d29",
+              "name": "reply_rate",
+              "value": "={{ $json.totals.reply_rate }}",
+              "type": "number"
+            },
+            {
+              "id": "55da284f-de1d-4254-b149-527c87ff8d81",
+              "name": "positive",
+              "value": "={{ $json.totals.positive }}",
+              "type": "number"
+            },
+            {
+              "id": "3c40dd26-9f98-4bc3-bb1f-50b27434436b",
+              "name": "bounce_rate",
+              "value": "={{ $json.totals.bounce_rate }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "503466fe-5945-46f9-aee7-8919b2311cb0",
+      "name": "Name client B",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 2
+      },
+      "id": "4abf9856-7fa3-4b2d-a32a-f5605d702909",
+      "name": "Merge clients",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        960,
+        170
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "5bd79777-2d4e-4c56-97e0-f348e7c8f041",
+      "name": "Append to the report",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        170
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Client A: active campaigns",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Client B: active campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client A: active campaigns": {
+      "main": [
+        [
+          {
+            "node": "Client A: last 7 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client A: last 7 days": {
+      "main": [
+        [
+          {
+            "node": "Name client A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name client A": {
+      "main": [
+        [
+          {
+            "node": "Merge clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client B: active campaigns": {
+      "main": [
+        [
+          {
+            "node": "Client B: last 7 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client B: last 7 days": {
+      "main": [
+        [
+          {
+            "node": "Name client B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name client B": {
+      "main": [
+        [
+          {
+            "node": "Merge clients",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge clients": {
+      "main": [
+        [
+          {
+            "node": "Append to the report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

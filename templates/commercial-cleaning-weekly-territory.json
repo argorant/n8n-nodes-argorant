@@ -1,0 +1,469 @@
+{
+  "name": "Commercial cleaning: work one territory a week from a sheet of postal codes",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Commercial cleaning: work one territory a week from a sheet of postal codes\n\n### How it works\nGrow route by route. Your sheet lists postal codes with a radius in miles. Every Monday the workflow takes the first row without a status, counts facility managers, property managers, office managers and building managers based within that radius, and saves them as a list named after the territory. If the count fits max_per_week, the list goes into your campaign and the row is marked done with the count; if not, the row is marked too large so you can split it. Only valid emails join the campaign.\n\nCosts: counting is free; adding costs 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns postal_code, radius_miles, status, people and add your territories.\n4. Pick it in **Next open territory** and **Mark the territory**, and pick the campaign.\n5. Set max_per_week in **Settings** and activate.\n\n### Customization\nChange the job titles in **Count managers nearby** for other buyers, such as hotel or clinic managers.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "12acf7a3-7654-44e6-91eb-f040d1f2eaa3",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick and size\nFirst open postal code, free count of managers within the radius.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "3b1be333-702f-442b-b084-44bd90d143d2",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Work the territory\nList, campaign (1 credit per new person), then the sheet row is marked.",
+        "height": 500,
+        "width": 940,
+        "color": 7
+      },
+      "id": "01617165-dba8-4773-b11b-f8ddfe885e49",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "408abb66-b0e1-4186-93b6-e2aff0c50666",
+      "name": "Every Monday at 6:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0eea1f95-cee8-4579-8d00-0542e0f14f0a",
+              "name": "max_per_week",
+              "value": "150",
+              "type": "number"
+            },
+            {
+              "id": "349723db-fa3c-4caa-94e7-a14a902cde32",
+              "name": "titles",
+              "value": "facility manager, property manager, office manager, building manager",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a50ed536-683a-4fa7-8e67-013502d9c036",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "00a5a5e3-34aa-4a88-b581-808ac0f295c9",
+      "name": "Next open territory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $('Settings').item.json.titles }}",
+          "nearPlace": "={{ $json.postal_code }}",
+          "radius": "={{ $json.radius_miles }}",
+          "radiusUnit": "mi"
+        }
+      },
+      "id": "66a03d0c-3793-41b4-b779-09dfc792cfde",
+      "name": "Count managers nearby",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a63bb90c-1808-45eb-b9ae-e5d39648a4ac",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_per_week }}"
+            },
+            {
+              "id": "e33a140f-2928-4872-9926-6932c26e8114",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b75d6cb4-0556-478d-9991-c036e81c00fa",
+      "name": "Fits the budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Territory {{ $('Next open territory').item.json.postal_code }}",
+        "peopleSource": "filters",
+        "filters": {
+          "title": "={{ $('Settings').item.json.titles }}",
+          "nearPlace": "={{ $('Next open territory').item.json.postal_code }}",
+          "radius": "={{ $('Next open territory').item.json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "simplify": true
+      },
+      "id": "e3ab8bce-61ba-4beb-b615-e9abd4b244ce",
+      "name": "Save the territory list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "df975205-2a75-4da9-a593-c960547019b4",
+      "name": "Add to the campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c192f9be-8904-455e-9b42-40c1ce5bcd28",
+              "name": "row_number",
+              "value": "={{ $('Next open territory').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "d2792d0b-bbdc-4110-8f67-9fc3eb0de085",
+              "name": "status",
+              "value": "done",
+              "type": "string"
+            },
+            {
+              "id": "6a512f37-fc0e-49c6-bf41-4baf55c29aa4",
+              "name": "people",
+              "value": "={{ $('Count managers nearby').item.json.count }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9b65fe34-3259-4193-b773-3fd08a4a8bd3",
+      "name": "Status: done",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef2fdaad-fc87-42fe-9647-24651f12654b",
+              "name": "row_number",
+              "value": "={{ $('Next open territory').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "549f8944-59a1-419d-934b-aa0da97bf4f1",
+              "name": "status",
+              "value": "too large or empty, split it",
+              "type": "string"
+            },
+            {
+              "id": "b3f72e46-65db-468d-8dc5-4f1974c2d7bd",
+              "name": "people",
+              "value": "={{ $('Count managers nearby').item.json.count }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2858d5df-f4fb-4142-8e05-146cef4ea68c",
+      "name": "Status: too large",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "4a4779aa-d665-4bf3-b779-429216c9e694",
+      "name": "Mark the territory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 6:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Next open territory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next open territory": {
+      "main": [
+        [
+          {
+            "node": "Count managers nearby",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count managers nearby": {
+      "main": [
+        [
+          {
+            "node": "Fits the budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fits the budget?": {
+      "main": [
+        [
+          {
+            "node": "Save the territory list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status: too large",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the territory list": {
+      "main": [
+        [
+          {
+            "node": "Add to the campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the campaign": {
+      "main": [
+        [
+          {
+            "node": "Status: done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: done": {
+      "main": [
+        [
+          {
+            "node": "Mark the territory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: too large": {
+      "main": [
+        [
+          {
+            "node": "Mark the territory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

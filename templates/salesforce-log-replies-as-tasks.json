@@ -1,0 +1,242 @@
+{
+  "name": "Log every campaign reply as a Salesforce task",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Log every campaign reply as a Salesforce task\n\n### How it works\nKeep Salesforce complete without copy and paste. Every new or interested reply from an Argorant campaign starts the workflow. It searches Salesforce for a contact with that email. If there is one, the reply is logged as a completed task on that contact. If not, the workflow creates a lead with the name and company from the reply and logs the task there. Out of office replies are left out by Argorant.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Add a Salesforce credential to the four Salesforce nodes.\n5. Check the lead source value in **Create a lead**.\n\n### Customization\nLog only interested replies by removing the New Reply event, or search leads as well as contacts.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "dacc62d6-d815-4c76-ab92-5221718d78a1",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Match in Salesforce\nContacts are matched by email. Unknown people become a lead first.",
+        "height": 400,
+        "width": 700,
+        "color": 7
+      },
+      "id": "3499c63f-1525-4755-b99c-e6bc459386a7",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Log the reply\nA completed task with the subject, the text and the campaign.",
+        "height": 500,
+        "width": 460,
+        "color": 7
+      },
+      "id": "7c2118f7-d9c4-4ad2-bc37-4ed27e6d3149",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.received",
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "e9d92d6a-a6b1-4741-807f-fa52f0ce57db",
+      "name": "Reply received",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "b74db5c4-eacc-450d-83e8-c2babb2b402e"
+    },
+    {
+      "parameters": {
+        "resource": "search",
+        "operation": "query",
+        "query": "=SELECT Id, Name FROM Contact WHERE Email = '{{ $json.lead_email.replace(/'/g, \"\\\\'\") }}' LIMIT 1"
+      },
+      "id": "c04d1d52-6589-466d-8dfe-87ca1c28b5a7",
+      "name": "Find the contact",
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1519cd8-61b9-4241-b8b8-e38d4b88f48a",
+              "leftValue": "={{ $json.Id }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6d2a1d4-0033-4a68-8ba2-a202af19c228",
+      "name": "Contact exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "operation": "create",
+        "status": "Completed",
+        "additionalFields": {
+          "subject": "=Reply: {{ $('Reply received').item.json.subject }}",
+          "description": "={{ $('Reply received').item.json.snippet }}\n\nCampaign: {{ $('Reply received').item.json.campaign_name || $('Reply received').item.json.campaign_id }}",
+          "whoId": "={{ $json.Id || $json.id }}"
+        }
+      },
+      "id": "78b18e98-9078-4228-8c21-65682be75c43",
+      "name": "Log the reply on the contact",
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "create",
+        "company": "={{ $('Reply received').item.json.company || $('Reply received').item.json.lead_email.split('@')[1] }}",
+        "lastname": "={{ ($('Reply received').item.json.lead_name || $('Reply received').item.json.lead_email).split(' ').slice(-1)[0] }}",
+        "additionalFields": {
+          "email": "={{ $('Reply received').item.json.lead_email }}",
+          "leadSource": "Argorant campaign"
+        }
+      },
+      "id": "6393d64f-a15f-425c-8554-35439a511996",
+      "name": "Create a lead",
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "operation": "create",
+        "status": "Completed",
+        "additionalFields": {
+          "subject": "=Reply: {{ $('Reply received').item.json.subject }}",
+          "description": "={{ $('Reply received').item.json.snippet }}\n\nCampaign: {{ $('Reply received').item.json.campaign_name || $('Reply received').item.json.campaign_id }}",
+          "whoId": "={{ $json.Id || $json.id }}"
+        }
+      },
+      "id": "a6e40b8b-3f87-4aed-9810-ce4dadad7371",
+      "name": "Log the reply on the lead",
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Reply received": {
+      "main": [
+        [
+          {
+            "node": "Find the contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the contact": {
+      "main": [
+        [
+          {
+            "node": "Contact exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact exists?": {
+      "main": [
+        [
+          {
+            "node": "Log the reply on the contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a lead": {
+      "main": [
+        [
+          {
+            "node": "Log the reply on the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
