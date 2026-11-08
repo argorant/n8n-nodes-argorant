@@ -1,0 +1,329 @@
+{
+  "name": "Score new leads in Google Sheets against your ideal customer with your own AI model",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Score new leads in Google Sheets against your ideal customer with your own AI model\n\n### How it works\nSort a growing lead sheet by fit, automatically. Each new row needs a domain. Argorant returns the company: industry, size, revenue band, location, founding year and description. Your own AI model compares that with the ideal customer you describe in Settings and returns a score from 1 to 10 plus a one-line reason. Score, reason, industry and size are written back to the same row, so you can sort the sheet and start at the top.\n\nArgorant lookups are free. Your model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Describe your ideal customer in **Settings** (industry, size, region, signals).\n4. Create a sheet with the columns domain, score, reason, industry, size and pick it in **New lead** and **Write the score**.\n5. Pick a chat model in **Chat model** (any chat model node works) and activate.\n\n### Customization\nAdd a team chat message for scores of 8 or more.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "6c3bfe93-a2c9-4db0-beb2-8148e41f77b2",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Know the company\nA free company lookup by domain.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "1552f555-d80a-451a-99ff-c7b96d7bae9b",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Score\nYour own model returns a 1 to 10 score and a reason. Any chat model node works.",
+        "height": 520,
+        "width": 700,
+        "color": 7
+      },
+      "id": "1ec56de8-9d70-4fa2-a9b5-e9ed72d6972c",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "bc75f3b6-eec5-44eb-9807-1d6e5eb88063",
+      "name": "New lead",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64a93e6a-43b6-4574-b7c4-f9a5d217777e",
+              "name": "ideal_customer",
+              "value": "B2B software companies with 50 to 500 employees in North America that sell to finance teams.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "595d366f-07d1-4aba-ad62-a7d909f90139",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "get",
+        "domain": "={{ $json.domain }}",
+        "previewLimit": 1,
+        "simplify": true
+      },
+      "id": "c31b72f9-5b03-450b-923f-05c1d7a59e92",
+      "name": "Get the company",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=Ideal customer: {{ $('Settings').item.json.ideal_customer }}\n\nCompany: {{ JSON.stringify($json) }}\n\nScore how well the company fits the ideal customer.",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "score",
+              "type": "number",
+              "description": "Fit from 1 (poor) to 10 (perfect)",
+              "required": true
+            },
+            {
+              "name": "reason",
+              "description": "One short sentence why",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5f2d395-abb4-4677-9423-2d7b17461490",
+      "name": "Score the fit",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "a2c73b17-a224-4c80-8433-ac54347b99c1",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0cd4edef-9de5-4db6-93a2-0a5cd8a6d5e2",
+              "name": "row_number",
+              "value": "={{ $('New lead').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "100515df-7296-434c-bf57-e009c7cddedc",
+              "name": "score",
+              "value": "={{ $json.output.score }}",
+              "type": "number"
+            },
+            {
+              "id": "28610ed3-f7c7-48ce-832e-f71fd3ceaa3a",
+              "name": "reason",
+              "value": "={{ $json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "926c4289-c9a7-4416-8d45-917709f0315d",
+              "name": "industry",
+              "value": "={{ $('Get the company').item.json.industry || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "8c9cd035-b44e-4bce-bda2-98e8a54354ea",
+              "name": "size",
+              "value": "={{ $('Get the company').item.json.employee_range || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a1d0cc3-aaf5-4438-a58d-4cd1fa5a1924",
+      "name": "Row result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "74bca0be-3d72-4189-be61-3ed9d981f415",
+      "name": "Write the score",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New lead": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Get the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the company": {
+      "main": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the fit": {
+      "main": [
+        [
+          {
+            "node": "Row result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row result": {
+      "main": [
+        [
+          {
+            "node": "Write the score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

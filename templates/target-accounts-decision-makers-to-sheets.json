@@ -1,0 +1,475 @@
+{
+  "name": "Find the decision makers of your target accounts and write them to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Find the decision makers of your target accounts and write them to Google Sheets\n\n### How it works\nTurn a list of target companies into named contacts. The Accounts tab holds one row per company domain with an empty status. Each run takes up to max_accounts open accounts and handles them one at a time: a free preview of people with your titles at that domain, then a reveal of up to per_account of them with checked work emails. Contacts land in the Contacts tab with their account, and the account row gets the number found and the status done, so the next run continues where this one stopped.\n\nCosts: 1 credit per revealed contact; caps in Settings.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the tabs Accounts (domain, status, contacts) and Contacts (account, name, title, email, profile).\n4. Pick the tabs in the three Google Sheets nodes.\n5. Set titles, per_account and max_accounts in **Settings**, then click Execute workflow.\n\n### Customization\nAdd a schedule trigger to work through a long list every night.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "73bb9e7c-d1e6-46cf-a450-3ae8848c61f4",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick accounts\nOpen rows only, at most max_accounts per run.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "aba987b7-df05-410b-ae18-a6746d782f7d",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Per account\nFree preview by title, then at most per_account reveals. The account row is marked done.",
+        "height": 280,
+        "width": 1420,
+        "color": 7
+      },
+      "id": "6e8f8a00-6896-48df-943f-b4f8d5210602",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -20
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1b970379-38f3-46d8-8e15-c802eb603e9a",
+      "name": "Run the list",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "472fb7fc-43d3-4fe6-9c50-5c78f4562f79",
+              "name": "titles",
+              "value": "CEO, COO, Head of Operations, VP Sales",
+              "type": "string"
+            },
+            {
+              "id": "23c18a6e-a556-47ce-b57f-bd9cb722a129",
+              "name": "per_account",
+              "value": "2",
+              "type": "number"
+            },
+            {
+              "id": "d4f9b3d6-fb95-475a-947e-4dfd9fcf854a",
+              "name": "max_accounts",
+              "value": "20",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "093e1ed0-cb81-4375-b1c8-14a89d1dec5c",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "344fea7f-d016-40a7-897c-25af9e2a5547",
+      "name": "Open accounts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_accounts }}"
+      },
+      "id": "b0044407-6c6c-4d94-a89c-c6ca13238b4f",
+      "name": "Cap accounts",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bb7da565-24dc-4e95-b34d-659d5400eb58",
+      "name": "One account at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "companyDomain": "={{ $json.domain }}",
+          "title": "={{ $('Settings').first().json.titles }}"
+        },
+        "limit": "={{ $('Settings').first().json.per_account }}",
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "b8b149e0-541f-45c1-b8a0-6f1400018eca",
+      "name": "Preview decision makers",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        120
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "recordIds",
+        "recordIds": "={{ $json.record_id || '' }}",
+        "simplify": true
+      },
+      "id": "8d094bb6-f7fa-4267-9706-4ce637eca276",
+      "name": "Reveal with checked emails",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "17ad8658-a116-4030-b13a-f93027b0b879",
+              "name": "account",
+              "value": "={{ $('One account at a time').item.json.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "55bd6351-31d0-4c10-9776-837f468ef164",
+              "name": "name",
+              "value": "={{ $json.full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "eeaa4b51-b93f-4719-b0b8-044d2d20e273",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "82b04fd7-61d5-432a-83b0-e385d1760879",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "81813fcd-3db8-4816-af09-c0e541a9dc90",
+              "name": "profile",
+              "value": "={{ $json.linkedin_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c42e6ee0-38b2-4d7e-a11e-0ae065a0a1c6",
+      "name": "Contact row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "5f919fdc-ab15-4c3d-939f-65e2972f2b51",
+      "name": "Add to Contacts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f2342c3-f9e2-4e56-bedb-8e8584ba2ed2",
+              "name": "row_number",
+              "value": "={{ $('One account at a time').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "7da4903e-d815-4cdf-a303-a2006f4139ba",
+              "name": "status",
+              "value": "done",
+              "type": "string"
+            },
+            {
+              "id": "60e7e1e8-381c-47d5-89eb-eb3e6e825e27",
+              "name": "contacts",
+              "value": "={{ $('Contact row').all().filter(r => r.json.email).length }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32d00998-e38d-44b2-80f1-4a9529e8a1aa",
+      "name": "Account done",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2160,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "fc5a1977-5bfc-4a2d-bb22-87f13df47814",
+      "name": "Mark the account",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2400,
+        120
+      ],
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Run the list": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Open accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open accounts": {
+      "main": [
+        [
+          {
+            "node": "Cap accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap accounts": {
+      "main": [
+        [
+          {
+            "node": "One account at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One account at a time": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Preview decision makers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview decision makers": {
+      "main": [
+        [
+          {
+            "node": "Reveal with checked emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal with checked emails": {
+      "main": [
+        [
+          {
+            "node": "Contact row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact row": {
+      "main": [
+        [
+          {
+            "node": "Add to Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Contacts": {
+      "main": [
+        [
+          {
+            "node": "Account done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account done": {
+      "main": [
+        [
+          {
+            "node": "Mark the account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark the account": {
+      "main": [
+        [
+          {
+            "node": "One account at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
