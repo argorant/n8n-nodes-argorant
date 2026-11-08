@@ -1,0 +1,379 @@
+{
+  "name": "Recruiting agencies: reach HR leaders at companies that are hiring",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Recruiting agencies: reach HR leaders at companies that are hiring\n\n### How it works\nAn open role is the best reason to call. Add a row with company_domain and open_role to your sheet. Argorant previews the people at that company with HR and talent titles (free), reveals up to people_per_company of them with checked work emails, and adds them to your campaign with {{open_role}}, so the first line can name the role. Only valid emails join the campaign. The row gets the number of contacts and a status.\n\nCosts: 1 credit per revealed contact with a passing email; people you revealed before are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns company_domain, open_role, status, contacts and pick it in **New hiring signal** and **Write back**.\n4. Set titles and people_per_company in **Settings**.\n5. Pick the campaign in **Add to campaign** and activate.\n\n### Customization\nAdd a seniority filter, or post the contacts to your team chat before the campaign add.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "2ff934ec-e9aa-4a81-b032-9904d2c56755",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find the people\nFree preview by title at the hiring company, then a paid reveal of up to people_per_company.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "58e279bf-a38d-4de1-b1d2-aa91aedb9f81",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enroll and report\nRevealed people join for free with {{open_role}}. The sheet row gets the count.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "9cf9483e-0737-43d5-8e35-bc9043bfcf22",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "3a9a646f-c52a-412f-bf12-2ca9b102a678",
+      "name": "New hiring signal",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2957e7f1-3e84-4489-b4dc-2220940f048e",
+              "name": "titles",
+              "value": "Head of Talent, Talent Acquisition, HR Director, VP People, Head of People",
+              "type": "string"
+            },
+            {
+              "id": "09d87f34-b3ef-449e-b656-30327052d046",
+              "name": "people_per_company",
+              "value": "2",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a635e246-2d8a-4d1c-bffc-805f1631ffa8",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "companyDomain": "={{ $json.company_domain }}",
+          "title": "={{ $json.titles }}"
+        },
+        "limit": "={{ $json.people_per_company }}",
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "90523ea8-2d57-47a7-9809-62591e4f92d1",
+      "name": "Find HR leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "recordIds",
+        "recordIds": "={{ $json.record_id }}",
+        "simplify": true
+      },
+      "id": "88bd1adb-d5dd-4241-859d-9aa53a910fe0",
+      "name": "Reveal with checked emails",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d93a56b-a967-4053-af22-e873cd41703e",
+              "leftValue": "={{ $json.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9cf4294d-8e4a-42be-9807-d75cf3c5f2b5",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $json.first_name }}",
+          "last_name": "={{ $json.last_name }}",
+          "company": "={{ $json.company }}",
+          "title": "={{ $json.title }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "open_role",
+              "value": "={{ $('New hiring signal').first().json.open_role }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "4d6a99da-6716-4afa-a87c-3cad349bfc99",
+      "name": "Add to campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5020fed-0a84-417c-837b-c079cb4bc2fd",
+              "name": "row_number",
+              "value": "={{ $('New hiring signal').first().json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "e13e4542-f4a6-485e-b2b2-4689e5fd2275",
+              "name": "status",
+              "value": "={{ ($('Add to campaign').first().json.inserted || 0) > 0 ? 'added to campaign' : 'sent to campaign: ' + ($('Add to campaign').first().json.summary || 'joins after the email check') }}",
+              "type": "string"
+            },
+            {
+              "id": "8182ed82-289b-4eb4-bd9f-bd6b31718984",
+              "name": "contacts",
+              "value": "={{ $('Has an email?').all().length }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1db21868-b817-4093-ae1e-3adbe0e7b0ca",
+      "name": "Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "9a1d6c53-dabd-436b-855f-e7efb978200b",
+      "name": "Write back",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New hiring signal": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Find HR leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find HR leaders": {
+      "main": [
+        [
+          {
+            "node": "Reveal with checked emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal with checked emails": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Add to campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to campaign": {
+      "main": [
+        [
+          {
+            "node": "Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result": {
+      "main": [
+        [
+          {
+            "node": "Write back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

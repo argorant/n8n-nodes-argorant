@@ -1,0 +1,224 @@
+{
+  "name": "Turn identified website visitor companies into campaign contacts",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Turn identified website visitor companies into campaign contacts\n\n### How it works\nReach the companies that just looked at your pricing page. Your website visitor tool posts JSON with company_domain and page to the webhook. Companies already handled in an earlier run are skipped, so nothing is paid twice. For a new company, Argorant searches the people with the job titles in Settings (for example the buyer and their boss) and adds up to people_per_company of them to your campaign; only valid emails join.\n\nCosts: 1 credit per new person added. Previews are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Edit **Settings**: titles and people_per_company.\n4. Pick the campaign in **Add the buyers to the campaign**.\n5. Send POST requests with {\"company_domain\": \"linfield.example\", \"page\": \"/pricing\"} to the production URL of **Visitor identified**.\n\n### Customization\nOnly react to some pages by adding a filter on page, or post the company to your team chat first.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "2434b3da-45d7-4e69-a29f-ada60971f381",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Once per company\nEach domain is handled one time across runs, so you never pay twice.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "6e91fd4a-d1d0-4a48-886b-ec4c7899e530",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find and add buyers\nFree preview by title, then up to people_per_company added for 1 credit each.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "49b96447-e1de-49b0-ad40-e5ef749db254",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "argorant-visitor",
+        "options": {}
+      },
+      "id": "78a8d262-0b41-4317-9576-444b8146f1e1",
+      "name": "Visitor identified",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "dc8b582b-4fd0-4721-b7f3-fd939bbf1285"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8eee2143-76f0-4aa0-a7a4-c24ed40f34d0",
+              "name": "company_domain",
+              "value": "={{ $json.body.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "c24c3901-c956-4ca4-b80b-63ff9c6e20f9",
+              "name": "page",
+              "value": "={{ $json.body.page }}",
+              "type": "string"
+            },
+            {
+              "id": "77da60c1-7d5f-4531-911d-e1141597fe36",
+              "name": "titles",
+              "value": "Head of Operations, COO, VP Operations",
+              "type": "string"
+            },
+            {
+              "id": "39cd9e4b-0ca0-49c3-a23c-d9fb12039e48",
+              "name": "people_per_company",
+              "value": "2",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "407fa941-cdc9-42a7-8c2e-9d53f2cdf34b",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.company_domain }}",
+        "options": {}
+      },
+      "id": "397a6ff7-5a65-49f4-8545-893a784ddd84",
+      "name": "New company only",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "companyDomain": "={{ $json.company_domain }}",
+          "title": "={{ $json.titles }}"
+        },
+        "limit": "={{ $json.people_per_company }}",
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "de19b20a-55b0-49f7-b7e3-244149e2d7f3",
+      "name": "Find buyers at the company",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "recordIds",
+        "recordIds": "={{ $json.record_id }}",
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "c7e6f64a-4b80-4d30-9ebb-8bda44e89764",
+      "name": "Add the buyers to the campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Visitor identified": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "New company only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New company only": {
+      "main": [
+        [
+          {
+            "node": "Find buyers at the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find buyers at the company": {
+      "main": [
+        [
+          {
+            "node": "Add the buyers to the campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

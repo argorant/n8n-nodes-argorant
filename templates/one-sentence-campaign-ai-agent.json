@@ -137,7 +137,7 @@
         "filterSource": "fields",
         "filters": {
           "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
-          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
           "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
           "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
           "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
@@ -161,7 +161,7 @@
         "filterSource": "fields",
         "filters": {
           "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
-          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
           "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
           "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
           "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
@@ -189,7 +189,7 @@
         "peopleSource": "filters",
         "filters": {
           "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
-          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
           "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
           "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
           "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
