@@ -1,0 +1,314 @@
+{
+  "name": "Add each day's new matches of a saved search to a list and a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Add each day's new matches of a saved search to a list and a campaign\n\n### How it works\nKeep a campaign fed with fresh people, on a budget. Every morning the workflow runs your saved search again and adds only the new matches to a list; people already in it are skipped. When the number of new people is within max_new_per_day, the list goes into your campaign, where only valid emails join and people taken out earlier stay out. Above the budget, nothing is spent and Slack tells you how many are waiting.\n\nCosts: the list is free; the campaign add costs 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Save a search as a list in Argorant (your filters), and create a second list as the target.\n4. Pick both in **Add new matches to the list**, and the campaign in **Add the list to the campaign**.\n5. Set max_new_per_day in **Settings**, add a Slack credential and activate.\n\n### Customization\nChange the time in **Every day at 7:00** or send the over budget note by email.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "6d2bffe0-bdab-4005-9b95-f6f6e5030e47",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Daily top-up\nOnly people who newly match the saved search join the list. Free.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "634d230c-0519-471c-8180-960980e7a782",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Budget guard\nThe campaign add costs credits, so it only runs within max_new_per_day.",
+        "height": 500,
+        "width": 700,
+        "color": 7
+      },
+      "id": "385fc9a3-3e56-4349-83f6-999628abdda9",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "ab173342-3e71-42d6-80c8-8e83bb9fcb15",
+      "name": "Every day at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cbd5de06-b7c6-4f53-b7b7-db39259d51f5",
+              "name": "max_new_per_day",
+              "value": "50",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7df6d184-a76f-4a3b-b6d0-9a59db877342",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "addPeople",
+        "listId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "peopleSource": "savedSearch",
+        "savedSearch": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "id": "662a8dd5-4466-48df-8138-26c96a1280ef",
+      "name": "Add new matches to the list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1558f57d-27a8-4883-b78a-737dc853264f",
+              "leftValue": "={{ $json.added }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').first().json.max_new_per_day }}"
+            },
+            {
+              "id": "53dd02ac-61eb-4b51-be81-54b18920894c",
+              "leftValue": "={{ $json.added }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "abf07f9e-772a-4047-930d-defa140093f0",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Add new matches to the list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "56807a06-8454-4e90-9bd9-eb1ab24dc87b",
+      "name": "Add the list to the campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170e2f42-348a-486f-992f-cae9e1a044a4",
+              "leftValue": "={{ $('Add new matches to the list').item.json.added }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": "={{ $('Settings').first().json.max_new_per_day }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9754b5b6-e567-4a3e-b7c5-2b030d3a333f",
+      "name": "Over budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $('Add new matches to the list').item.json.added }} new people match your saved search today, more than the daily budget of {{ $('Settings').first().json.max_new_per_day }}. They wait in list {{ $('Add new matches to the list').item.json.name }} until you add them.",
+        "otherOptions": {}
+      },
+      "id": "9588e191-2da4-4e85-bd13-eb72f869b0e1",
+      "name": "Tell the team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Every day at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Add new matches to the list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add new matches to the list": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Add the list to the campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Over budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Over budget?": {
+      "main": [
+        [
+          {
+            "node": "Tell the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

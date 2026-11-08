@@ -1,0 +1,477 @@
+{
+  "name": "One sentence to campaign with your AI agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## One sentence to campaign with your AI agent\n\n### How it works\nChat with your own AI model to build a whole outbound campaign from one sentence. The agent uses Argorant as its tools: it counts and previews matching people, saves them as a list, creates a campaign draft, writes the emails, adds the people (only valid emails join) and checks what still blocks a launch. It launches only after you confirm in the chat.\n\nCosts: counts, previews, lists and drafts are free. Adding people costs 1 credit per new person. The agent asks before it adds people or launches.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick a chat model in **Chat model** and add its credential. Any chat model node works.\n4. Connect sending mailboxes in Argorant before you launch.\n5. Open the chat and describe who you want to reach.\n\n### Customization\nEdit the system message in **Campaign builder agent** to change the tone of the emails, the number of steps or your offer.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "b4fdb3ba-e361-4365-b450-797cc8f1d667",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Your AI model\nAny chat model node works. It only plans and writes; Argorant does the data work.",
+        "height": 120,
+        "width": 380,
+        "color": 7
+      },
+      "id": "2b6d2c5b-19cc-4ca3-b72f-c6b8d117dcbf",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Argorant tools\nCounting, previews, lists and drafts are free. Adding people costs credits. Launch needs a yes in the chat.",
+        "height": 120,
+        "width": 1340,
+        "color": 7
+      },
+      "id": "ad71f58e-346f-47ea-bfc4-a2f9a905fec0",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Warning\nLaunch campaign sends real email. It only runs when the model sets the confirmation after your explicit yes.",
+        "height": 190,
+        "width": 240,
+        "color": 3
+      },
+      "id": "97ebffb3-43d3-46f0-b8e4-883e80d7fcc1",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "172cd4e8-1a2f-4a87-859f-15b6188c8386",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "793726f8-b2a9-4a33-9412-397cf0e2feab"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You build B2B outbound campaigns in Argorant for the user. Work step by step and keep answers short.\n1. Turn the user's sentence into filters: job titles, industry in plain words, countries or regions, company size words. Call Count leads and report the number.\n2. Call Preview leads for up to 10 people and summarize titles and companies. Never invent people.\n3. When the user agrees, call Save as list with a clear name.\n4. Call Create campaign draft, then write 2 or 3 short plain-text emails and save them with Write campaign emails. The first email has a subject and stays under 90 words. Use {{first_name|there}} and {{company|your team}}. No links and no placeholders such as [link].\n5. Before Add list to campaign, tell the user how many people the list holds and that each new person costs 1 credit (only valid emails join). Call it only after the user says yes.\n6. Call Check launch readiness and explain any blockers in plain words.\n7. Ask: Launch now? Reply yes to start sending. Call Launch campaign only after the user's latest message is an explicit yes to launching. Never launch on your own.\nUse only ids that the tools returned. If a tool fails, say what failed and what the user can do.",
+          "maxIterations": 30
+        }
+      },
+      "id": "17cdf3c0-d576-4c86-b65e-b6bae38c14e8",
+      "name": "Campaign builder agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "54ae78c5-082c-43ec-b046-8ec63f124be2",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        40,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 20
+      },
+      "id": "06b9b077-2754-47c1-a5b0-92412fd28f21",
+      "name": "Chat memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Count the people who match the filters. Free. Call this first.",
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
+          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
+          "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
+        }
+      },
+      "id": "b6063bb4-2b3d-4f8e-808f-62dd43919788",
+      "name": "Count leads",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        480,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Preview up to 10 matching people with names masked. Free.",
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
+          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
+          "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
+        },
+        "limit": 10,
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "8ba783a8-7807-424b-8e12-ab966f7845f9",
+      "name": "Preview leads",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        640,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Save everyone who matches the filters as a list. Free. Returns list_id.",
+        "resource": "list",
+        "operation": "create",
+        "name": "={{ $fromAI('list_name', 'A short name for the list', 'string') }}",
+        "peopleSource": "filters",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas, for example Head of Operations, COO', 'string', '') }}",
+          "country": "={{ $fromAI('countries', 'Countries or regions as a JSON array of names, for example [\"United States\"]', 'json', []) }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words, for example logistics', 'string', '') }}",
+          "state": "={{ $fromAI('states', 'States or provinces separated by commas, for example Texas', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the target companies do, separated by commas', 'string', '') }}"
+        },
+        "simplify": true
+      },
+      "id": "a8c25f88-a06f-4911-acb4-bfaae154feef",
+      "name": "Save as list",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        800,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create an empty campaign draft that sends from all connected mailboxes. Free. Returns the campaign id.",
+        "resource": "campaign",
+        "operation": "create",
+        "name": "={{ $fromAI('campaign_name', 'A short campaign name', 'string') }}",
+        "steps": {},
+        "senderMode": "all",
+        "settings": {},
+        "simplify": true
+      },
+      "id": "c0eaa91b-a5da-487f-af98-cb22cdb720ef",
+      "name": "Create campaign draft",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        960,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Save the email sequence of a campaign: a first email with subject and body, and up to two follow-ups. Free.",
+        "resource": "campaign",
+        "operation": "setSteps",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('campaign_id', 'The campaign id from Create campaign draft', 'string') }}"
+        },
+        "steps": {
+          "step": [
+            {
+              "subject": "={{ $fromAI('subject_1', 'Subject of the first email', 'string') }}",
+              "body": "={{ $fromAI('body_1', 'Plain text body of the first email', 'string') }}",
+              "delayDays": 0
+            },
+            {
+              "subject": "",
+              "body": "={{ $fromAI('body_2', 'Plain text body of the first follow-up, sent in the same thread', 'string', '') }}",
+              "delayDays": 3
+            },
+            {
+              "subject": "",
+              "body": "={{ $fromAI('body_3', 'Plain text body of the second follow-up, or empty', 'string', '') }}",
+              "delayDays": 4
+            }
+          ]
+        },
+        "allowPlaceholders": false
+      },
+      "id": "3fb2e9b7-d6d4-4e59-896c-6439c5460c6e",
+      "name": "Write campaign emails",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Add every person of a saved list to a campaign. Costs 1 credit per new person; only valid emails join. Only after the user said yes.",
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('campaign_id', 'The campaign id', 'string') }}"
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('list_id', 'The list_id from Save as list', 'string') }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "2154ef7e-8524-4f69-81d9-ee81af0392a4",
+      "name": "Add list to campaign",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Check what still blocks a launch. Never sends anything.",
+        "resource": "campaign",
+        "operation": "launch",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('campaign_id', 'The campaign id', 'string') }}"
+        },
+        "confirmLaunch": false,
+        "simplify": true
+      },
+      "id": "3fc51c13-04d5-4fe1-8bc6-5584ca99bb8d",
+      "name": "Check launch readiness",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Start sending the campaign. Only after the user explicitly typed yes to launching it.",
+        "resource": "campaign",
+        "operation": "launch",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $fromAI('campaign_id', 'The campaign id', 'string') }}"
+        },
+        "confirmLaunch": "={{ $fromAI('user_confirmed_launch', 'true only if the latest user message is an explicit yes to launching this campaign after seeing the readiness check; otherwise false', 'boolean', false) }}",
+        "allowPlaceholders": false,
+        "simplify": true
+      },
+      "id": "770b8279-63d5-403b-b268-428cf167c9e8",
+      "name": "Launch campaign",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Count leads": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview leads": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as list": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create campaign draft": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write campaign emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add list to campaign": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check launch readiness": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Launch campaign": {
+      "ai_tool": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Campaign builder agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

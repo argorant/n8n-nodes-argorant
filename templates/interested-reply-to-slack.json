@@ -1,0 +1,224 @@
+{
+  "name": "Post interested replies to Slack with the whole thread",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Post interested replies to Slack with the whole thread\n\n### How it works\nGet every interested reply into Slack with context. The Argorant Trigger fires when a reply is labeled Interested or Meeting request, by Argorant or by your team, and adds the conversation ID. The workflow reads the whole thread and posts one clear message with the reply, the person, the campaign and a link to answer. If the conversation cannot be found yet, it still posts the short preview from the event.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick your Argorant credential in **Interested reply** and activate the workflow. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. In **Post to Slack**, add a Slack credential and pick the channel.\n5. Mark a test reply as Interested in Argorant to try it.\n\n### Customization\nChange the message text in **Build Slack message**. Use the Campaign Names option of the trigger to follow only some campaigns.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "d683ad89-add5-4b93-af5f-d41244be3616",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read the conversation\nThe trigger adds the conversation ID. The whole thread gives your team the context.",
+        "height": 400,
+        "width": 460,
+        "color": 7
+      },
+      "id": "53e2201c-1189-4552-9ac0-1aaa04ee0c66",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Notify the team\nOne Slack message per interested reply, with a link to answer in Argorant.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "7889dabd-92fd-45ca-bdcb-98cb6469e24c",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "dee8868f-1762-472d-9888-962e8ccd53fe",
+      "name": "Interested reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "98cf391f-4ede-4c5c-8ce4-706458b0750d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1558fc0a-c14b-4d57-a8de-427b43936cf6",
+              "leftValue": "={{ $json.conversation_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9dd940fe-d937-4b52-858a-03afa16be66c",
+      "name": "Conversation found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "get",
+        "conversationId": "={{ $json.conversation_id }}",
+        "simplify": true
+      },
+      "id": "99f4acbc-5b5f-4568-8955-ce0912a06d49",
+      "name": "Read the thread",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a89f3ddf-4d59-4a53-af01-82b213922842",
+              "name": "text",
+              "value": "=*Interested reply* from {{ $('Interested reply').item.json.lead_name || $('Interested reply').item.json.lead_email }} ({{ $('Interested reply').item.json.lead_email }})\n*Campaign:* {{ $('Interested reply').item.json.campaign_name || 'Argorant campaign' }}\n*Subject:* {{ $('Interested reply').item.json.subject }}\n\n{{ ($json.body || $('Interested reply').item.json.snippet || '').slice(0, 2500) }}\n\nAnswer in Argorant: https://app.argorant.com/inbox",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b707038c-a75b-48f0-b5a1-218916d56185",
+      "name": "Build Slack message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "45bdf89b-d09d-4fd7-9cea-be084b8bd525",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Interested reply": {
+      "main": [
+        [
+          {
+            "node": "Conversation found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation found?": {
+      "main": [
+        [
+          {
+            "node": "Read the thread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the thread": {
+      "main": [
+        [
+          {
+            "node": "Build Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack message": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

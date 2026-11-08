@@ -1,0 +1,268 @@
+{
+  "name": "Check the email of every form signup and add valid ones to a nurture campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Check the email of every form signup and add valid ones to a nurture campaign\n\n### How it works\nKeep fake and mistyped addresses out of your campaigns. The n8n form asks for first name, last name, work email and company. Argorant checks the email right away. A valid address joins your nurture campaign with the name and company as variables, and the person sees a thank you page. Any other result (invalid, risky, catch-all or unknown) shows a friendly page asking for a work email, and nothing is added.\n\nCosts: half a credit per fresh check; addresses checked recently are free. Adding to the campaign is free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick the nurture campaign in **Add to nurture campaign**.\n4. Activate the workflow and share the production URL of **Signup form**.\n\n### Customization\nEdit the form fields and the texts of the two end pages. Business emails only can be switched on in the add options.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "619205d3-6fa8-4b8f-9a28-da6a6ad99587",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check\nEvery address is checked before anything else happens.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "2fe06b53-b48c-44e6-b4b5-84dbd425b345",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enroll or ask again\nValid addresses join the campaign. Others are asked for a work email.",
+        "height": 500,
+        "width": 460,
+        "color": 7
+      },
+      "id": "fc7f383c-8098-4cd4-ad9c-ca7cae9a631d",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Get the guide",
+        "formDescription": "Tell us where to send it.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "First name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Last name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "3743926d-e555-476c-8cd8-618335eaacce",
+      "name": "Signup form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a770f8a8-8155-4a99-bb8c-c28825f41a27"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json['Work email'] }}"
+      },
+      "id": "af38a5f9-01e5-4e0f-b522-81d132cc0894",
+      "name": "Check the email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "30dd3e8e-8642-412d-90e5-8b6788e91a4c",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "df2469b7-c81c-4f14-ac74-86ac10088e31",
+      "name": "Valid email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('Signup form').item.json['First name'] }}",
+          "last_name": "={{ $('Signup form').item.json['Last name'] }}",
+          "company": "={{ $('Signup form').item.json.Company }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "source",
+              "value": "website form"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "d4bac790-5ac4-46bd-80c7-290505c6ace5",
+      "name": "Add to nurture campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Thank you",
+        "completionMessage": "Check your inbox in a few minutes.",
+        "options": {}
+      },
+      "id": "1fb4cd07-3676-4d98-8307-4e59f0c4a4bd",
+      "name": "Thank you page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Please use your work email",
+        "completionMessage": "We could not confirm this address. Please go back and enter your work email.",
+        "options": {}
+      },
+      "id": "355c7ce4-8de2-4731-9fa9-790c7eed6579",
+      "name": "Ask for a work email",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Signup form": {
+      "main": [
+        [
+          {
+            "node": "Check the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the email": {
+      "main": [
+        [
+          {
+            "node": "Valid email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid email?": {
+      "main": [
+        [
+          {
+            "node": "Add to nurture campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for a work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to nurture campaign": {
+      "main": [
+        [
+          {
+            "node": "Thank you page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
