@@ -1,0 +1,408 @@
+{
+  "name": "Salon, spa and gym owners: one city a week from a sheet into checked contacts",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Salon, spa and gym owners: one city a week from a sheet into checked contacts\n\n### How it works\nA steady local pipeline, one city a week. Your cities sheet lists a place and a radius per row. Every Monday the workflow takes the first row without a status, asks Argorant for owners and founders at health, wellness, fitness and beauty companies whose description matches salon, spa, gym or fitness studio within that radius, and reveals up to max_people of them with a work email checked right before you get it. They are appended to your leads sheet, and the city row is marked done with the number found.\n\nCosts: 1 credit per revealed contact with a passing email, capped by max_people a week.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a cities sheet (place, radius_miles, status, found) and a leads sheet (date, name, title, company, email, city); pick them in the three sheet nodes.\n4. Set max_people and keywords in **Settings** and activate.\n\n### Customization\nSwap the keywords for barbers, nail studios or yoga studios.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "fa2dbe5e-8e70-4380-8ce3-e9b22efc4449",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick the city\nFirst row of the cities sheet without a status.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "1c95eaa3-77a5-43b2-b500-d02c64acb6a3",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reveal and record\nOwners within the radius (1 credit each with a passing email), then the city is marked done.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "bdafb45f-eed9-4caf-9fcc-7eb8d958868e",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "0bc2dd12-43fc-4c8f-848b-71144c17c080",
+      "name": "Every Monday at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "84a0f4c7-0044-429c-960b-a6e13b6e75ca",
+              "name": "max_people",
+              "value": "40",
+              "type": "number"
+            },
+            {
+              "id": "20af00d0-11b3-479e-90c6-29b1c15221e1",
+              "name": "keywords",
+              "value": "salon, spa, gym, fitness studio, beauty",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6b35a31a-3b85-4822-9b94-ecb5cbcebed4",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "a64eb84c-94e5-4e73-8eb1-50d8169b2953",
+      "name": "Next open city",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "filters",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Health, Wellness & Fitness",
+            "Cosmetics"
+          ],
+          "keywords": "={{ $('Settings').first().json.keywords }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "nearPlace": "={{ $json.place }}",
+          "radius": "={{ $json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "revealCount": "={{ $('Settings').first().json.max_people }}",
+        "simplify": true
+      },
+      "id": "b1e7bee9-c45b-4953-ae4c-9bd4761e903d",
+      "name": "Reveal owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISODate() }}",
+            "name": "={{ $json.full_name }}",
+            "title": "={{ $json.title }}",
+            "company": "={{ $json.company }}",
+            "email": "={{ $json.email }}",
+            "city": "={{ $json.city }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3fbd7ce5-5986-48ca-a6b6-a0bae76807d3",
+      "name": "Append to leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85446bbe-b98b-4612-a8e0-550643ed616f",
+              "name": "row_number",
+              "value": "={{ $('Next open city').first().json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "d5866f20-589e-43ed-9f7e-04fb06312b99",
+              "name": "status",
+              "value": "done",
+              "type": "string"
+            },
+            {
+              "id": "f6062c17-a703-420f-bfaa-be21a707dc7b",
+              "name": "found",
+              "value": "={{ $('Reveal owners').all().filter(i => i.json.record_id).length }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "02a08c99-a6ed-4504-88a7-1f2e89059d0e",
+      "name": "City result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "e30475b1-d9f4-48ee-8209-f99daf17e56f",
+      "name": "Mark the city",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Next open city",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next open city": {
+      "main": [
+        [
+          {
+            "node": "Reveal owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal owners": {
+      "main": [
+        [
+          {
+            "node": "Append to leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to leads": {
+      "main": [
+        [
+          {
+            "node": "City result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "City result": {
+      "main": [
+        [
+          {
+            "node": "Mark the city",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,273 @@
+{
+  "name": "Enrich new leads in a Notion database with title, company and profile URL",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich new leads in a Notion database with title, company and profile URL\n\n### How it works\nTurn a bare email in Notion into a usable lead. The Notion Trigger checks your lead database every minute. New pages with an email, at most max_per_poll at a time, go to Argorant Enrich. When the person is found, the page gets their title, company and profile URL, and the Enriched checkbox is ticked, so you can filter the view. Pages without a match get the checkbox too, with an empty title, so they are not tried again.\n\nCosts: 1 credit per person found whose email passes the check. Misses and repeats are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Notion credential and share the lead database with that integration.\n4. Pick the database in **New page in the lead database** and check the property names in **Update the page** (Title, Company, Profile URL, Enriched).\n5. Set max_per_poll in **Settings** and activate.\n\n### Customization\nAdd a Seniority select property and map the seniority from the enrichment.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "2ed53b11-132d-402b-9b77-742f1ed241c0",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## New pages\nPages with an email, at most max_per_poll at a time.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "a131fb62-02d9-4899-8e9d-8381e5d16d07",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enrich and write back\n1 credit when the person is found with a passing email.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "905908e4-b87e-4fed-a4ed-040aedab9d75",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "event": "pageAddedToDatabase",
+        "dataSourceId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "simple": true,
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "id": "b0eba1fd-42be-4379-a1fb-4dcb5cb5fd63",
+      "name": "New page in the lead database",
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "93559175-c733-4d0b-9c92-e1a92ec14850",
+              "name": "max_per_poll",
+              "value": "20",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "af51f9c6-db44-4d6c-a6ce-c3a85d8bedca",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f2487833-accc-423f-b6d1-6a554ed143f6",
+              "leftValue": "={{ $('New page in the lead database').item.json.property_email }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5293e3df-370d-48ad-9a88-dc84c331a623",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_per_poll }}"
+      },
+      "id": "cedece93-363e-456f-bd3f-a65643ba5e89",
+      "name": "Cap per poll",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $('New page in the lead database').item.json.property_email }}",
+        "simplify": true
+      },
+      "id": "d4c32c52-9960-4083-b703-df1da1cd9ed1",
+      "name": "Enrich the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New page in the lead database').item.json.id }}"
+        },
+        "simple": true,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Title|rich_text",
+              "textContent": "={{ $json.title || '' }}"
+            },
+            {
+              "key": "Company|rich_text",
+              "textContent": "={{ $json.company || '' }}"
+            },
+            {
+              "key": "Profile URL|url",
+              "urlValue": "={{ $json.linkedin_url || '' }}",
+              "ignoreIfEmpty": true
+            },
+            {
+              "key": "Enriched|checkbox",
+              "checkboxValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "84fe844a-cd38-4522-b6fc-1de6e948aa0b",
+      "name": "Update the page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New page in the lead database": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Cap per poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per poll": {
+      "main": [
+        [
+          {
+            "node": "Enrich the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich the person": {
+      "main": [
+        [
+          {
+            "node": "Update the page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

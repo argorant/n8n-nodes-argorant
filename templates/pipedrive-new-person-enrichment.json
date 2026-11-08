@@ -1,0 +1,300 @@
+{
+  "name": "Enrich new Pipedrive people with title, company and profile in a note",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich new Pipedrive people with title, company and profile in a note\n\n### How it works\nContext on every new Pipedrive person. The Pipedrive Trigger fires when a person is added. The workflow takes the primary email and asks Argorant for the person behind it. When a match with a passing email is found, a note pinned to the person lists job title, seniority, company, location and profile URL, and the person's name is filled in when Pipedrive only had the email. People without a match stay as they are.\n\nCosts: 1 credit per match; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Pipedrive credential to **Person added**, **Pin a note** and **Fill the name**.\n4. Activate the workflow.\n\n### Customization\nWrite the title into a custom person field instead of a note.",
+        "height": 558,
+        "width": 520,
+        "color": 1
+      },
+      "id": "7966019a-fdec-41bf-9dd5-5594ed4f04b7",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enrich\n1 credit per match with a passing email.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "1bedb721-2bfc-42af-adb9-e35185d56dec",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Write to Pipedrive\nA pinned note; the name only when it is empty.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "a807f21c-76c2-4d1e-9d95-aab1074932ed",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "action": "create",
+        "entity": "person"
+      },
+      "id": "d8f593bf-9f4a-4abd-83e0-b282e6d3b679",
+      "name": "Person added",
+      "type": "n8n-nodes-base.pipedriveTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "80206e37-5f15-485b-b9e5-c49429214642"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "73596c00-333d-4348-acc1-58bedfa1021f",
+              "leftValue": "={{ ($json.data.emails || []).find(e => e.primary)?.value || '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "64ea55c9-df05-4a6a-81a5-6ac28dfd01b9",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.data.emails.find(e => e.primary).value }}",
+        "simplify": true
+      },
+      "id": "e61669e1-82f8-4849-831e-a3cbdfb0bf4a",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "69bd18f4-62ea-433f-a90c-6082421b36ea",
+              "leftValue": "={{ $json.found }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bb7d2a74-80d1-4e2e-abbe-c5b7f468d33d",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "note",
+        "operation": "create",
+        "content": "=Argorant: {{ $json.full_name }}, {{ $json.title }} ({{ $json.seniority }}) at {{ $json.company }}, {{ $json.city }}, {{ $json.country }}. Profile: {{ $json.linkedin_url }}",
+        "additionalFields": {
+          "person_id": "={{ $('Person added').item.json.data.id }}",
+          "pinned_to_person_flag": true
+        }
+      },
+      "id": "2600b982-458d-4166-8341-2544dee23ca4",
+      "name": "Pin a note",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1077de6-b41a-4190-a912-6a8344afbc9e",
+              "leftValue": "={{ $('Person added').item.json.data.name }}",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ab1c9a76-d604-4510-8d37-dcec5c9e63c6",
+      "name": "Name missing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "operation": "update",
+        "personId": "={{ $('Person added').item.json.data.id }}",
+        "updateFields": {
+          "name": "={{ $('Find the person').item.json.full_name }}"
+        }
+      },
+      "id": "caea5ac7-5c60-4407-b4aa-9be735acaeed",
+      "name": "Fill the name",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Person added": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [
+          {
+            "node": "Pin a note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pin a note": {
+      "main": [
+        [
+          {
+            "node": "Name missing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name missing?": {
+      "main": [
+        [
+          {
+            "node": "Fill the name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

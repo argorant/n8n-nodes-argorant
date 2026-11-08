@@ -1,0 +1,520 @@
+{
+  "name": "Multi-location operators: operations and facilities leaders at regional chains",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Multi-location operators: operations and facilities leaders at regional chains\n\n### How it works\nChains buy once for many locations. Once a month Argorant counts directors and VPs of operations, facilities managers and regional or area managers at retail, restaurant, medical practice and fitness companies with 201 to 5,000 employees in your country, a good proxy for regional and multi-site operators. If the count is within max_people, the search is saved as a list, a campaign draft with two short emails is created, and the list joins the draft once it has filled; otherwise nothing is saved or spent. Slack gets the numbers either way.\n\nCosts: free until the list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set country and max_people in **Settings**; change industries or sizes in the count node.\n4. Edit the emails in **Create the campaign draft**, pick the channel in **Report** and activate.\n\n### Customization\nSplit by industry into separate campaigns for sharper emails.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "8ade80ab-651b-45dc-bdcf-35d676e12804",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size\nFree count of operations leaders at mid-size chains, checked against max_people.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "67c035fd-9698-42fb-8d4a-f6b3df84ea96",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft and fill\nList and draft are free. Once the list has filled, it joins the draft (1 credit per new person).",
+        "height": 280,
+        "width": 1660,
+        "color": 7
+      },
+      "id": "4ec7337f-8841-4a4b-88e8-d9bb866265c7",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "61b15b16-64c7-48b4-9330-9f651d74576e",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d8bf29da-22e1-4bc3-92a3-6810a556e37a",
+              "name": "country",
+              "value": "United States",
+              "type": "string"
+            },
+            {
+              "id": "3b9597ea-8fed-4080-b6fe-3eeb65e8c4bf",
+              "name": "max_people",
+              "value": "400",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5871ea72-7483-4761-bd81-60d94cef489c",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Retail",
+            "Restaurants",
+            "Medical Practice",
+            "Health, Wellness & Fitness"
+          ],
+          "employeeRange": [
+            "201-500",
+            "501-1000",
+            "1001-5000"
+          ],
+          "title": "director of operations, VP operations, head of operations, facilities manager, regional manager, area manager",
+          "country": "={{ [$('Settings').item.json.country] }}"
+        }
+      },
+      "id": "a5a96763-d6b5-4108-a219-0d3ff001f442",
+      "name": "Count operators",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "556b809c-6c7a-4f29-8340-9949f0141ee5",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_people }}"
+            },
+            {
+              "id": "7b953904-2ee2-48df-8d20-1d600ed7a7a5",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e5ad7eac-0d95-4aa4-a24d-7f5928c26026",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Multi-site operators {{ $now.toFormat('yyyy-MM') }}",
+        "peopleSource": "filters",
+        "filters": {
+          "industries": [
+            "Retail",
+            "Restaurants",
+            "Medical Practice",
+            "Health, Wellness & Fitness"
+          ],
+          "employeeRange": [
+            "201-500",
+            "501-1000",
+            "1001-5000"
+          ],
+          "title": "director of operations, VP operations, head of operations, facilities manager, regional manager, area manager",
+          "country": "={{ [$('Settings').item.json.country] }}"
+        },
+        "simplify": true
+      },
+      "id": "0991f964-a6db-433a-81a8-73ce016054e6",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "create",
+        "name": "=Multi-site operators {{ $now.toFormat('yyyy-MM') }}",
+        "steps": {
+          "step": [
+            {
+              "subject": "One setup for every site, {{first_name|there}}",
+              "body": "Hi {{first_name|there}},\n\nTeams that run many locations like {{company|yours}} usually juggle a different vendor per site. We cover all of them with one contract.\n\nWorth a short call?\n\nAlex",
+              "delayDays": 0
+            },
+            {
+              "subject": "",
+              "body": "Hi {{first_name|there}}, happy to send numbers from a similar operator instead.",
+              "delayDays": 4
+            }
+          ]
+        },
+        "senderMode": "none",
+        "settings": {
+          "tags": "multi-site"
+        },
+        "simplify": true
+      },
+      "id": "138b01a3-22fb-4398-8b86-e918e7aca206",
+      "name": "Create the campaign draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "e2b66389-6c79-40b0-8aa3-a29cd4af2288",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        340
+      ],
+      "webhookId": "105a6b38-f11f-45de-92e0-0e9b6e89669d"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "cafff481-46fd-4abe-a7a4-cd266e162821",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bcae66c6-3ffe-42e8-b880-4a697728f26b",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "57e01d39-1a05-4cc7-9a86-51bfffbd512c",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "89a104f3-7f55-435e-b203-2c27cb441a28",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create the campaign draft').item.json.id }}"
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "7a203d5b-6399-491d-8aeb-74dd07deed5b",
+      "name": "Add the list to the draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Multi-site operators: {{ $('Count operators').item.json.count }} people are in the draft {{ $('Create the campaign draft').item.json.url }}. Review it, attach mailboxes and launch.",
+        "otherOptions": {}
+      },
+      "id": "d4d1afed-9071-4b0d-8513-b5a4e09ca2fc",
+      "name": "Report: draft filled",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Multi-site operators: {{ $json.count }} people match, above your budget of {{ $('Settings').item.json.max_people }} (or none). Nothing was saved or spent.",
+        "otherOptions": {}
+      },
+      "id": "5aad6697-78eb-4b8f-8ac8-a4373d231c2b",
+      "name": "Report: nothing added",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add the list to the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count operators",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count operators": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Report: nothing added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Create the campaign draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the campaign draft": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the list to the draft": {
+      "main": [
+        [
+          {
+            "node": "Report: draft filled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,181 @@
+{
+  "name": "Create a HighLevel contact for every interested reply",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Create a HighLevel contact for every interested reply\n\n### How it works\nInterested prospects belong in your pipeline right away. The Argorant Trigger fires when a reply is marked Interested, by Argorant or by your team. The workflow opens the conversation for the full text, then creates or updates the contact in HighLevel (matched by email) with first and last name, company, the tag from Settings, the source and a note with the reply and the campaign name. From there your HighLevel automations take over: a pipeline stage, a task or an SMS.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys). Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n3. Add a HighLevel credential to **Create or update the contact**.\n4. Set tag and source in **Settings** and activate.\n\n### Customization\nAdd an opportunity in HighLevel, or route by campaign with a Switch node.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "c3ca069b-adbc-4447-9a93-8b017ba66aa1",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Interested reply\nFires when Argorant or your team marks a reply as Interested.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "56ca1b92-de9b-4427-90b3-e97d0b0c2f97",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## HighLevel\nUpsert by email with tag, source and the reply as a note.",
+        "height": 280,
+        "width": 260,
+        "color": 7
+      },
+      "id": "2c96ff9f-4b01-49cd-adad-7c4f8c04945a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "c7381b31-ca6e-4cc3-8e44-cafc17adc0c1",
+      "name": "Reply marked interested",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2e47bd9c-c0af-4001-b494-4491b5549e0f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b6a3366-2bb8-4fe0-8404-a989322dc7d3",
+              "name": "tag",
+              "value": "argorant-interested",
+              "type": "string"
+            },
+            {
+              "id": "cad268d6-6c22-4e28-9c6c-ae292115bca6",
+              "name": "source",
+              "value": "Argorant campaign",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "12164fc4-680a-49a3-bbe0-6ce3c724ca5a",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "reply",
+        "operation": "get",
+        "conversationId": "={{ $json.conversation_id }}",
+        "simplify": true
+      },
+      "id": "662c83da-d4a9-4271-82d7-421a9570a41f",
+      "name": "Read the conversation",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "create",
+        "email": "={{ $('Settings').item.json.lead_email }}",
+        "additionalFields": {
+          "firstName": "={{ ($('Settings').item.json.lead_name || '').split(' ')[0] }}",
+          "lastName": "={{ ($('Settings').item.json.lead_name || '').split(' ').slice(1).join(' ') }}",
+          "tags": "={{ $('Settings').item.json.tag }}",
+          "source": "={{ $('Settings').item.json.source }}",
+          "notes": "=Interested reply to {{ $('Settings').item.json.campaign_name }} ({{ $('Settings').item.json.company }}):\n\n{{ ($json.body || $('Settings').item.json.snippet || '').slice(0, 1500) }}"
+        }
+      },
+      "id": "6cdb3254-bd0e-4d6b-9c62-ca18102d7942",
+      "name": "Create or update the contact",
+      "type": "n8n-nodes-base.highLevel",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Reply marked interested": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read the conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the conversation": {
+      "main": [
+        [
+          {
+            "node": "Create or update the contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,429 @@
+{
+  "name": "Find companies that match your market, score them with AI and keep the best in a sheet",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Find companies that match your market, score them with AI and keep the best in a sheet\n\n### How it works\nA weekly shortlist of accounts worth your time. Argorant searches companies in your industry, country and size range and returns up to max_companies of them with industry, size, location and description. Companies scored in an earlier run are skipped. Your own AI model scores each new one from 1 to 10 against your ideal customer. Companies at or above min_score land in your sheet with domain, name, score and reason.\n\nArgorant search is free. Your model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set industry (an Argorant industry such as Software & Internet), country, size, max_companies, ideal_customer and min_score in **Settings**.\n4. Create a sheet with the columns domain, company, score, reason, industry, size and pick it in **Add to the shortlist**.\n5. Pick a chat model (any chat model node works) and activate.\n\n### Customization\nAdd a Lead Count per company to see how many buyers each one has.",
+        "height": 636,
+        "width": 520,
+        "color": 1
+      },
+      "id": "c7d65e43-af0c-494f-a801-1c2fadad6779",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find\nFree company search; companies seen before are skipped.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "66c66c90-7e44-4fb0-b8ca-000eb33e0c82",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Score and keep\nYour own model scores; only min_score and above reach the sheet.",
+        "height": 520,
+        "width": 940,
+        "color": 7
+      },
+      "id": "0461e569-89d0-461f-b9e6-6bed2f646fb6",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "3456cd19-4ddc-47a1-aa0b-567ce55a50a1",
+      "name": "Every Monday at 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9a466dd3-93d6-4ff8-a7f1-e65ca910da21",
+              "name": "industry",
+              "value": "Software & Internet",
+              "type": "string"
+            },
+            {
+              "id": "8fa14866-955d-43c0-abd7-be52d7479097",
+              "name": "country",
+              "value": "Germany",
+              "type": "string"
+            },
+            {
+              "id": "32ca5110-6a28-40d8-9eaa-87250b7af1e7",
+              "name": "size",
+              "value": "51-200",
+              "type": "string"
+            },
+            {
+              "id": "8502da0e-59e9-4c53-a74d-0b02298e716f",
+              "name": "max_companies",
+              "value": "25",
+              "type": "number"
+            },
+            {
+              "id": "534ad831-0fe2-4296-8305-9d7b0508dbd6",
+              "name": "ideal_customer",
+              "value": "B2B software companies that sell to manufacturers.",
+              "type": "string"
+            },
+            {
+              "id": "5223cf86-1e71-418c-89ff-bf93b1b1ed33",
+              "name": "min_score",
+              "value": "7",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b6c4ba49-bd47-4f69-9f53-3799a4499507",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "search",
+        "filters": {
+          "industries": "={{ [$json.industry] }}",
+          "country": "={{ [$json.country] }}",
+          "employeeRange": "={{ [$json.size] }}"
+        },
+        "returnAll": false,
+        "limit": "={{ $json.max_companies }}",
+        "simplify": true
+      },
+      "id": "d2fa3396-29ae-4e1e-85cb-395bd2645038",
+      "name": "Search companies",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.company_domain }}",
+        "options": {}
+      },
+      "id": "66de89b1-0d13-4209-ba1d-f334ff5dca7f",
+      "name": "New companies only",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=Ideal customer: {{ $('Settings').first().json.ideal_customer }}\n\nCompany: {{ JSON.stringify($json) }}\n\nScore how well the company fits the ideal customer.",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "score",
+              "type": "number",
+              "description": "Fit from 1 (poor) to 10 (perfect)",
+              "required": true
+            },
+            {
+              "name": "reason",
+              "description": "One short sentence why",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6db55f0b-b043-4d56-bf3a-fce8a5472e8f",
+      "name": "Score the fit",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "f9b0117f-1dd5-4b85-877c-f483fb9c845e",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4999ab6-8312-4b7a-978d-d1b82d41c335",
+              "leftValue": "={{ $json.output.score }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "rightValue": "={{ $('Settings').first().json.min_score }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5f5163c5-5813-4b5c-b402-4a867d3edd52",
+      "name": "Good fit only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2eaccbea-b731-406d-bab4-e193eda9773e",
+              "name": "domain",
+              "value": "={{ $('New companies only').item.json.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "e77676fb-be96-4993-b203-5abea6ba0166",
+              "name": "company",
+              "value": "={{ $('New companies only').item.json.display_name || $('New companies only').item.json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "1c780254-dbc4-4a98-9435-2c435dbf3902",
+              "name": "score",
+              "value": "={{ $json.output.score }}",
+              "type": "number"
+            },
+            {
+              "id": "b4883cb8-061e-4f1f-bcb7-57544b249e86",
+              "name": "reason",
+              "value": "={{ $json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "239e7db2-5706-4ee3-b62c-c53303e613a9",
+              "name": "industry",
+              "value": "={{ $('New companies only').item.json.industry }}",
+              "type": "string"
+            },
+            {
+              "id": "7914d251-2dc0-4999-8fab-eed072e5e80c",
+              "name": "size",
+              "value": "={{ $('New companies only').item.json.employee_range }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b246233a-c2b8-4607-862e-96a1f350cdbb",
+      "name": "Shortlist row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "46f663cc-f0ea-4eb3-8bdd-55436704521f",
+      "name": "Add to the shortlist",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 7:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Search companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search companies": {
+      "main": [
+        [
+          {
+            "node": "New companies only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New companies only": {
+      "main": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the fit": {
+      "main": [
+        [
+          {
+            "node": "Good fit only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Good fit only": {
+      "main": [
+        [
+          {
+            "node": "Shortlist row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shortlist row": {
+      "main": [
+        [
+          {
+            "node": "Add to the shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Score the fit",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

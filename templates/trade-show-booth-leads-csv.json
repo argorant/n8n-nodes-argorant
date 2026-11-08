@@ -1,0 +1,475 @@
+{
+  "name": "Trade show booth leads: upload the scans, check every email and start the follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Trade show booth leads: upload the scans, check every email and start the follow-up\n\n### How it works\nBadge scans are full of typos and personal addresses. After the event, open the form, type the event name and upload the CSV (columns email, first_name, last_name, company, title). Up to max_rows rows are read. Argorant checks every email; valid ones without a title are enriched to fill it, and each joins your post-event campaign with {{event_name}} as a variable, so the first email can mention the booth conversation. The form ends with the number of people added.\n\nCosts: half a credit per fresh check, 1 credit per enrichment that finds the person. Your own contacts join for free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Pick the campaign in **Add to the post-event campaign** and set max_rows in **Settings**.\n4. Activate and open the production URL of **Upload booth scans**.\n\n### Customization\nSkip the enrichment step if your scans already carry titles.",
+        "height": 636,
+        "width": 520,
+        "color": 1
+      },
+      "id": "1fc4285a-ef8f-47ea-b0b5-601895c96680",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read and check\nUp to max_rows scans; every address that looks like an email is checked.",
+        "height": 280,
+        "width": 1420,
+        "color": 7
+      },
+      "id": "3363f289-830b-41fd-8b92-5c613f1a8406",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Follow up\nMissing titles filled, then the post-event campaign with {{event_name}}.",
+        "height": 380,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "e8f31c32-37f2-4df9-99cc-7e8d4190049d",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Booth scans",
+        "formDescription": "Event name and the CSV export of your badge scans.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Event name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Scans (CSV)",
+              "fieldName": "scans",
+              "fieldType": "file",
+              "requiredField": true,
+              "multipleFiles": false,
+              "acceptFileTypes": ".csv"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "3c5b5a78-eb12-4bb1-be18-a07e4b4357e5",
+      "name": "Upload booth scans",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8c3c8cf5-4698-4afb-9f78-fce169c22e09"
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "scans",
+        "options": {}
+      },
+      "id": "8633f16c-a941-47e8-802c-24f47c6d0254",
+      "name": "Read the CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1d1da0d2-f2f6-41b3-b636-eb8ab8a34985",
+              "name": "max_rows",
+              "value": "500",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "27dce053-8c22-4d96-ac1c-4b4a42ed383d",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_rows }}"
+      },
+      "id": "e46c85bd-3a52-4003-94dc-50c7bd28f159",
+      "name": "Cap rows",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea74b69b-8875-4506-b3c5-bf10e2504a19",
+              "leftValue": "={{ String($json.email || '').trim() }}",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              },
+              "rightValue": "/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "54d5e4ec-e765-496f-9db7-a5ed47c2798c",
+      "name": "Looks like an email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.email.trim() }}"
+      },
+      "id": "cdb4f500-6f82-4831-99e8-cc388ff6b91a",
+      "name": "Check the email",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0b8654d0-16e1-40af-9b95-d953f1e3195a",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "valid"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "174e9a0d-06ba-4eca-a21f-dc4d7af8f47e",
+      "name": "Valid email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1a55c273-2a94-4c39-8985-477674004423",
+              "leftValue": "={{ $('Cap rows').item.json.title }}",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "78c2f823-e7df-47b8-a792-c7610f79edc2",
+      "name": "Title missing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $('Cap rows').item.json.email }}",
+        "simplify": true
+      },
+      "id": "82d54edf-e2af-4767-a859-636b1899dfc4",
+      "name": "Enrich the title",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 2
+      },
+      "id": "974342c7-93f8-4122-9c57-a176756a242b",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        960,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $('Cap rows').item.json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('Cap rows').item.json.first_name }}",
+          "last_name": "={{ $('Cap rows').item.json.last_name }}",
+          "company": "={{ $('Cap rows').item.json.company }}",
+          "title": "={{ $('Cap rows').item.json.title || $json.title || '' }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "event_name",
+              "value": "={{ $('Upload booth scans').first().json['Event name'] }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "3a7c3405-d938-4cd7-8f59-405afc4214bb",
+      "name": "Add to the post-event campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Follow-up started",
+        "completionMessage": "={{ $('Valid email?').all().length }} valid scans went to the post-event campaign. Invalid or risky addresses were left out.",
+        "options": {}
+      },
+      "id": "f462590e-8675-4f78-95ac-0da9a6af8a70",
+      "name": "Result page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        380
+      ],
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Upload booth scans": {
+      "main": [
+        [
+          {
+            "node": "Read the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the CSV": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Cap rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap rows": {
+      "main": [
+        [
+          {
+            "node": "Looks like an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Looks like an email": {
+      "main": [
+        [
+          {
+            "node": "Check the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the email": {
+      "main": [
+        [
+          {
+            "node": "Valid email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid email?": {
+      "main": [
+        [
+          {
+            "node": "Title missing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Title missing?": {
+      "main": [
+        [
+          {
+            "node": "Enrich the title",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Enrich the title": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Add to the post-event campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the post-event campaign": {
+      "main": [
+        [
+          {
+            "node": "Result page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

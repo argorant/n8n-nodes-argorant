@@ -1,0 +1,294 @@
+{
+  "name": "Recheck HubSpot contact emails every month and flag the ones that stopped working",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Recheck HubSpot contact emails every month and flag the ones that stopped working\n\n### How it works\nCatch dead addresses before your sends do. On the first of each month the workflow reads up to max_checks HubSpot contacts with their email and checks each address with Argorant. The result (valid, invalid, catch_all, risky or unknown) and the check date are written to two contact properties. Build an active list in HubSpot on argorant_email_status is invalid to keep those contacts out of sends and to find the people who changed jobs.\n\nCosts: half a credit per fresh check, capped by max_checks.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. In HubSpot, create the contact properties argorant_email_status and argorant_checked_on (single line text).\n4. Add a HubSpot App Token credential (contacts read and write) to both HubSpot nodes.\n5. Set max_checks in **Settings** and activate.\n\n### Customization\nRecheck only contacts not checked in the last 90 days with a HubSpot filter.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "fb685aad-e111-414f-8621-3c237fafa523",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick contacts\nContacts with an email, at most max_checks a month.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "463003aa-ea10-4b69-a448-1bc9dc6a46c6",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check and flag\nHalf a credit per fresh check. The result lands on the contact.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "afb271e1-d507-447a-9547-69fda814ec8f",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "id": "8477ddd7-18d4-485c-ba0e-4a901ddbfbfa",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c9cb19fa-0f07-4b10-8283-c22faac50e67",
+              "name": "max_checks",
+              "value": "500",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "21c53747-7f9d-4f75-b758-42acbf6a067c",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $json.max_checks }}",
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "email"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "id": "05b1c628-ef0d-41b1-966f-d67b8d8b58fc",
+      "name": "Get contacts",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a32ac1db-f12b-41e8-ad0f-3643ad96739a",
+              "leftValue": "={{ $json.properties?.email?.value }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "07918aa5-974c-4750-afb7-ea560c39e6d5",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_checks }}"
+      },
+      "id": "c12abc6c-b7ca-43e2-80bf-c39b4794e3c1",
+      "name": "Cap per month",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.properties.email.value }}"
+      },
+      "id": "b1c4979c-0bef-425e-a5db-e2828f440cc6",
+      "name": "Check the address",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('Cap per month').item.json.properties.email.value }}",
+        "additionalFields": {
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "argorant_email_status",
+                "value": "={{ $json.status || 'not checked' }}"
+              },
+              {
+                "property": "argorant_checked_on",
+                "value": "={{ $now.toISODate() }}"
+              }
+            ]
+          }
+        },
+        "options": {}
+      },
+      "id": "813f6802-d08b-4987-a36e-9cddb1e85879",
+      "name": "Write the result",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Get contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get contacts": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Cap per month",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per month": {
+      "main": [
+        [
+          {
+            "node": "Check the address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the address": {
+      "main": [
+        [
+          {
+            "node": "Write the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

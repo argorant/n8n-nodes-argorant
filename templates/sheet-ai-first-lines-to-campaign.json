@@ -1,0 +1,340 @@
+{
+  "name": "Write a personal first line with your own AI for each sheet row and add the person to a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Write a personal first line with your own AI for each sheet row and add the person to a campaign\n\n### How it works\nSpecific first lines at the pace of a spreadsheet. Each new row holds email, first_name, company and notes (anything your team found: a hire, an office, a post). Your own AI model writes one opening line of at most 25 words from the notes, without flattery or made-up facts. The person is added to your campaign with first_line as a variable; write {{first_line|Hope the quarter is going well.}} in your first email so people without a line still get a good opener. Argorant checks the address and only valid emails join. The row gets the line and the result.\n\nYour own rows cost no Argorant credits.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns email, first_name, company, notes, first_line, status and pick it in **New row** and **Write back**.\n4. Pick the campaign in **Add to campaign** and write {{first_line|...}} into its first email.\n5. Pick a chat model (any chat model node works) and activate.\n\n### Customization\nChange the tone or length in **Write the first line**.",
+        "height": 670,
+        "width": 520,
+        "color": 1
+      },
+      "id": "4c5d5762-6aa0-4874-943f-8441780f1912",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Write\nYour own model writes one line from the notes. Any chat model node works.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "a67ab35e-c2e9-4924-b6db-096cbdc0ea37",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enroll\nOwn rows are free; only valid emails join. The row gets the line and the result.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "7012fe05-b19e-4f74-b69e-7490f4c60a42",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "6bdb7474-7892-4294-8de2-30278c27ea99",
+      "name": "New row",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1802d729-b222-4bed-8dac-87423eb16fbe",
+              "leftValue": "={{ $json.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "b1657515-58c8-47cf-af84-5360b44e1b9c",
+              "leftValue": "={{ $json.notes }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "48751fe6-56b8-42d3-b942-c657e19ad5e3",
+      "name": "Has email and notes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write one opening line for a cold email to {{ $json.first_name }} at {{ $json.company }}. At most 25 words, plain and specific, based only on these notes: {{ $json.notes }}. No flattery, no questions, no made-up facts. Return only the line."
+      },
+      "id": "52c247f0-a305-4633-aa45-84d2d2a0111c",
+      "name": "Write the first line",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        480,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "370ff70d-0f34-4a67-a57a-37f4ffde832b",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "items",
+        "leadEmail": "={{ $('New row').item.json.email }}",
+        "leadFields": {
+          "first_name": "={{ $('New row').item.json.first_name }}",
+          "company": "={{ $('New row').item.json.company }}"
+        },
+        "extraColumns": {
+          "column": [
+            {
+              "name": "first_line",
+              "value": "={{ $json.text.trim() }}"
+            }
+          ]
+        },
+        "batchSize": 500,
+        "addLeadsOptions": {}
+      },
+      "id": "502f34de-a2a8-4734-b05c-53d11eb19084",
+      "name": "Add to campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f15f8fc6-5b9b-4388-aed5-fc5e34623410",
+              "name": "row_number",
+              "value": "={{ $('New row').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "1229352e-9383-42fe-b56a-7eeeb922eed8",
+              "name": "first_line",
+              "value": "={{ $('Write the first line').item.json.text.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "79d101da-7039-4664-b759-779e54dfa135",
+              "name": "status",
+              "value": "={{ ($json.inserted || 0) > 0 ? 'added to campaign' : 'sent to campaign: ' + ($json.summary || 'joins after the email check') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a6f91a6f-e288-4dc6-915e-8fa192f453b3",
+      "name": "Row result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "58071dda-48a3-496c-8745-721f60863547",
+      "name": "Write back",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "New row": {
+      "main": [
+        [
+          {
+            "node": "Has email and notes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has email and notes?": {
+      "main": [
+        [
+          {
+            "node": "Write the first line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write the first line",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the first line": {
+      "main": [
+        [
+          {
+            "node": "Add to campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to campaign": {
+      "main": [
+        [
+          {
+            "node": "Row result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row result": {
+      "main": [
+        [
+          {
+            "node": "Write back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

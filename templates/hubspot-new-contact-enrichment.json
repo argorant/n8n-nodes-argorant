@@ -1,0 +1,279 @@
+{
+  "name": "Enrich every new HubSpot contact with job title, company and profile URL",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich every new HubSpot contact with job title, company and profile URL\n\n### How it works\nEvery new contact, complete within a minute. The HubSpot Trigger fires on contact creation. The workflow reads the contact's email and asks Argorant for the person behind it. When Argorant finds a match with a passing email, the contact is updated with job title, company name, seniority, city, country and profile URL. Contacts without a match stay as they are, so nothing is overwritten with guesses. Free mail addresses rarely match; that is expected.\n\nCosts: 1 credit per match; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a HubSpot Developer API credential to **New contact** and a HubSpot App Token credential (private app, contacts read and write) to **Get the email** and **Update the contact**.\n4. Activate the workflow.\n\n### Customization\nSkip contacts that already have a job title, or write to custom properties instead.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "bbe0a44a-e490-42a5-9faa-21918743272e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read the contact\nThe trigger sends the ID; the email comes from HubSpot.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "e3c48525-3afe-48cc-8dc3-1da22e76066f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enrich\n1 credit per match with a passing email. Misses leave the contact as it is.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "50ce8c78-4bc6-49bf-b72e-2125bcb95f32",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "eventsUi": {
+          "eventValues": [
+            {
+              "name": "contact.creation"
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "e4c7effd-734b-4b0b-a8cf-b17befe8ceee",
+      "name": "New contact",
+      "type": "n8n-nodes-base.hubspotTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "e35316e1-07d9-493b-ad01-6cedaba0b68c"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "get",
+        "contactId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.objectId }}"
+        },
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "email"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "id": "e072f43e-e5fa-4b07-a2e9-ff8d94baad49",
+      "name": "Get the email",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d077d4f6-29b7-460a-aa3a-2c985ca66ac4",
+              "leftValue": "={{ $json.properties.email.value }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5bb381a9-02c5-41a8-a9d9-020288cfc2d4",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.properties.email.value }}",
+        "simplify": true
+      },
+      "id": "4a244bb4-f0d6-4af7-bc09-2510496d3be2",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "88fec384-a33b-4b17-8fe6-ea33a7878edc",
+              "leftValue": "={{ $json.found }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "732aecc6-0c3c-430b-b25e-3a8b516c472b",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $('Get the email').item.json.properties.email.value }}",
+        "additionalFields": {
+          "jobTitle": "={{ $json.title }}",
+          "companyName": "={{ $json.company }}",
+          "seniority": "={{ $json.seniority }}",
+          "city": "={{ $json.city }}",
+          "country": "={{ $json.country }}",
+          "linkedinUrl": "={{ $json.linkedin_url }}"
+        },
+        "options": {}
+      },
+      "id": "ea29e038-c627-438e-8cfd-0484d9727641",
+      "name": "Update the contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New contact": {
+      "main": [
+        [
+          {
+            "node": "Get the email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the email": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [
+          {
+            "node": "Update the contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

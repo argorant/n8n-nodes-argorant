@@ -1,0 +1,421 @@
+{
+  "name": "New businesses in your city: owners of recently founded companies into a welcome campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## New businesses in your city: owners of recently founded companies into a welcome campaign\n\n### How it works\nNew companies need everything at once: an accountant, insurance, an office, a website. Once a month Argorant counts owners, founders and C-level people at companies founded in or after founded_since (last year by default) based within the radius around your place. If the count is within max_people, they are saved as a list named after the month, which joins your welcome campaign once it has filled (usually a minute or two); people already in it are not added twice. Otherwise nothing is saved or spent.\n\nCosts: free until the list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set place, radius_miles and max_people in **Settings**.\n4. Pick the welcome campaign in **Add to the welcome campaign** and activate.\n\n### Customization\nNarrow by industry, or set founded_since to this year for the newest companies only.",
+        "height": 636,
+        "width": 520,
+        "color": 1
+      },
+      "id": "24f41797-d2ca-4a23-945d-c75cb0d7b42b",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size\nFree count of owners of recently founded companies nearby, checked against max_people.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "a0e945ff-ab53-4878-b8af-d47fbde2535f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Welcome\nOnce the list has filled, it joins the welcome campaign (1 credit per new person).",
+        "height": 280,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "41f44701-6f44-4ca6-9552-593d40c3c4fe",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "17ef8450-8f83-4e02-b764-db670c8cb51b",
+      "name": "First of the month",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45f28152-2823-4c4c-9b7e-1bce6a2214ec",
+              "name": "place",
+              "value": "Austin, Texas",
+              "type": "string"
+            },
+            {
+              "id": "9e177090-7215-4cad-b6a2-9f6a12cc2710",
+              "name": "radius_miles",
+              "value": "20",
+              "type": "number"
+            },
+            {
+              "id": "ac9c8c92-d835-4e4a-847b-d66828a1a6ee",
+              "name": "founded_since",
+              "value": "={{ $now.year - 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "56472d9f-3067-458f-b88b-8e89f5118b39",
+              "name": "max_people",
+              "value": "300",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "721b5353-0dac-47d8-8fd2-c2251669c09e",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "foundedMin": "={{ $('Settings').first().json.founded_since }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "nearPlace": "={{ $('Settings').first().json.place }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        }
+      },
+      "id": "8add8edb-a475-4a2e-a718-93cc0b87cb8b",
+      "name": "Count new company owners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2b7f5d3-22e8-4a85-a8e8-30412afa741e",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').first().json.max_people }}"
+            },
+            {
+              "id": "69b75bd6-3d74-47a9-a958-c29cf5b4522e",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "71c25609-fba1-4cfa-96e1-61ebc54e9e9c",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=New companies {{ $('Settings').first().json.place }} {{ $now.toFormat('yyyy-MM') }}",
+        "peopleSource": "filters",
+        "filters": {
+          "foundedMin": "={{ $('Settings').first().json.founded_since }}",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "nearPlace": "={{ $('Settings').first().json.place }}",
+          "radius": "={{ $('Settings').first().json.radius_miles }}",
+          "radiusUnit": "mi"
+        },
+        "simplify": true
+      },
+      "id": "462a709f-d4b0-4f8f-8ca8-d4f68ffae9cc",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "e4e3c7e1-d415-4f99-b87d-70a1ddca37b2",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        340
+      ],
+      "webhookId": "b4210dc8-ca82-4557-ade7-ae1751f79d28"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "916cc92a-94de-44a7-9d7d-f13e3dc410d5",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea6f3a3c-6a9d-425e-adbf-45eff6944ce1",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "fb810d8c-1540-469d-8ac7-423f2c25e5a2",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6755bb4b-741a-4c66-a41a-c1fcd833bee5",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "a685f6f2-decf-4904-93cc-b92dc85821de",
+      "name": "Add to the welcome campaign",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        340
+      ]
+    }
+  ],
+  "connections": {
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to the welcome campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First of the month": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count new company owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count new company owners": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

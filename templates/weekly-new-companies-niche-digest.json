@@ -1,0 +1,252 @@
+{
+  "name": "Post a weekly Slack digest of new companies in your niche",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Post a weekly Slack digest of new companies in your niche\n\n### How it works\nWatch your market without searching by hand. Every Monday Argorant searches companies whose description matches your keywords, in your country, founded in or after founded_since (three years back by default). Companies posted in an earlier week are dropped, so the digest shows only newcomers. The rest are posted to Slack as one message: name, domain, size and city, at most max_results. Spot a fit and save it in Argorant, or ask your team who knows them.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set keywords, country, founded_since and max_results in **Settings**.\n4. Pick the channel in **Post the digest** and activate.\n\n### Customization\nAdd the new companies to a sheet, or find their founders with Lead > Search.",
+        "height": 575,
+        "width": 520,
+        "color": 1
+      },
+      "id": "549f8944-59a1-419d-934b-aa0da97bf4f1",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Search\nRecently founded companies that match your keywords. Free.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "df975205-2a75-4da9-a593-c960547019b4",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Digest\nOne message with the newcomers, nothing when there are none.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "c192f9be-8904-455e-9b42-40c1ce5bcd28",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "408abb66-b0e1-4186-93b6-e2aff0c50666",
+      "name": "Every Monday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0eea1f95-cee8-4579-8d00-0542e0f14f0a",
+              "name": "keywords",
+              "value": "solar, battery storage",
+              "type": "string"
+            },
+            {
+              "id": "349723db-fa3c-4caa-94e7-a14a902cde32",
+              "name": "country",
+              "value": "Germany",
+              "type": "string"
+            },
+            {
+              "id": "a50ed536-683a-4fa7-8e67-013502d9c036",
+              "name": "founded_since",
+              "value": "={{ $now.year - 3 }}",
+              "type": "number"
+            },
+            {
+              "id": "00a5a5e3-34aa-4a88-b581-808ac0f295c9",
+              "name": "max_results",
+              "value": "25",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "66a03d0c-3793-41b4-b779-09dfc792cfde",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "search",
+        "filters": {
+          "keywords": "={{ $json.keywords }}",
+          "country": "={{ [$json.country] }}",
+          "foundedMin": "={{ $json.founded_since }}"
+        },
+        "returnAll": false,
+        "limit": "={{ $json.max_results }}",
+        "simplify": true
+      },
+      "id": "a63bb90c-1808-45eb-b9ae-e5d39648a4ac",
+      "name": "Search new companies",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.company_domain }}",
+        "options": {}
+      },
+      "id": "e33a140f-2928-4872-9926-6932c26e8114",
+      "name": "Not shown before",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nif (!rows.length) return [];\nconst lines = rows.map(c => `• ${c.company_name || c.display_name} (${c.company_domain}), ${c.employee_range || 'size unknown'}, ${c.city || c.country || ''}`);\nreturn [{ json: { text: `${rows.length} new companies in your niche this week:\\n` + lines.join('\\n') } }];"
+      },
+      "id": "b75d6cb4-0556-478d-9991-c036e81c00fa",
+      "name": "Build the digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "e3ab8bce-61ba-4beb-b615-e9abd4b244ce",
+      "name": "Post the digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Search new companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search new companies": {
+      "main": [
+        [
+          {
+            "node": "Not shown before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not shown before": {
+      "main": [
+        [
+          {
+            "node": "Build the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the digest": {
+      "main": [
+        [
+          {
+            "node": "Post the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

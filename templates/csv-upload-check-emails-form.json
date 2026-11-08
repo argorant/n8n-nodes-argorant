@@ -1,0 +1,330 @@
+{
+  "name": "Upload a CSV of email addresses and download it with a check result per address",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Upload a CSV of email addresses and download it with a check result per address\n\n### How it works\nCheck a list before it bounces. The form accepts a CSV file with an email column (other columns are kept as they are). The workflow reads the file, removes duplicate addresses, keeps the first max_rows and checks each one with Argorant. Every row gets status (valid, invalid, catch_all, risky or unknown) and send yes or no, and the form offers the result as a CSV download.\n\nCosts: half a credit per fresh check; recent checks are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set max_rows in **Settings**.\n4. Activate the workflow and share the production URL of **Upload form**.\n\n### Customization\nReturn only the rows with send yes, or email the file to the person who uploaded it.",
+        "height": 602,
+        "width": 520,
+        "color": 1
+      },
+      "id": "772c9a98-f24d-410b-9a85-39adf9751625",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Read the upload\nDuplicates removed, at most max_rows checks per upload.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "56feb42c-bb1b-4125-987a-04e36dd8f4a6",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Check and return\nHalf a credit per fresh check. The form returns the CSV.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "1d054de1-8fcf-4fcb-9e3a-55d636b33502",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Check email addresses",
+        "formDescription": "CSV with a column named email.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "CSV file",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "b25339b0-9553-4a99-9d4a-1bcf6ba9653f",
+      "name": "Upload form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "1b79ea60-6c98-4f41-ae16-b36880c16b73"
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "CSV_file",
+        "options": {}
+      },
+      "id": "c3f4cfa7-dc16-49fd-baf0-81e402de7ae7",
+      "name": "Read the CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b659b88b-b747-4a1d-ac92-80b3f4854726",
+              "name": "max_rows",
+              "value": "500",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b1e1aaf9-31f7-4416-8ce1-25dac9dbb74b",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeDuplicateInputItems",
+        "compare": "selectedFields",
+        "fieldsToCompare": "email",
+        "options": {}
+      },
+      "id": "e692170b-800e-40c7-843c-e2348f1c99fd",
+      "name": "One row per address",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_rows }}"
+      },
+      "id": "efb5b587-618e-49c9-b3e5-74a010ed69e8",
+      "name": "Cap per upload",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "check",
+        "email": "={{ $json.email }}"
+      },
+      "id": "b55d725e-8e1a-4f1f-8616-4bf75a6a5156",
+      "name": "Check the address",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb9449d6-f36b-407a-a70e-3279269d60e6",
+              "name": "status",
+              "value": "={{ $json.status || 'not checked' }}",
+              "type": "string"
+            },
+            {
+              "id": "4adbad91-d416-4c72-a0f2-0e63d6c6ffc0",
+              "name": "send",
+              "value": "={{ $json.status === 'valid' ? 'yes' : 'no' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "selected",
+        "includeFields": "email",
+        "options": {}
+      },
+      "id": "ebd25774-a0ff-44e5-8f0e-2a0333b18d30",
+      "name": "Output row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "checked-emails.csv"
+        }
+      },
+      "id": "2df18860-adbc-46ec-bfa6-9554a57f63b6",
+      "name": "Build the CSV",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "returnBinary",
+        "inputDataFieldName": "data",
+        "completionTitle": "Your file is ready",
+        "completionMessage": "The download starts now.",
+        "options": {}
+      },
+      "id": "a3593998-21b2-47ad-ab38-3b71a796a4ec",
+      "name": "Download page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Upload form": {
+      "main": [
+        [
+          {
+            "node": "Read the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the CSV": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "One row per address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per address": {
+      "main": [
+        [
+          {
+            "node": "Cap per upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per upload": {
+      "main": [
+        [
+          {
+            "node": "Check the address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the address": {
+      "main": [
+        [
+          {
+            "node": "Output row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output row": {
+      "main": [
+        [
+          {
+            "node": "Build the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the CSV": {
+      "main": [
+        [
+          {
+            "node": "Download page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

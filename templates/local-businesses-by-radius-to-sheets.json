@@ -1,0 +1,406 @@
+{
+  "name": "Find local business owners near a place and save them with checked emails to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Find local business owners near a place and save them with checked emails to Google Sheets\n\n### How it works\nBuild a local prospect sheet in one minute. The form asks for the kind of business (for example dental clinics or restaurants), a city or postal code and a radius in miles. Argorant previews owners, founders and partners of businesses in that area for free, then reveals up to max_reveal of them with a checked work email. People whose email fails the check are left out and cost nothing. Each contact lands as one row in your sheet with name, title, business, website, email and city, and the form shows how many were added.\n\nCosts: 1 credit per revealed contact, capped by max_reveal.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set max_preview and max_reveal in **Settings**.\n4. Create a sheet with the columns name, title, company, website, email, city and pick it in **Add to the sheet**.\n5. Activate and open the production URL of **Local search form**.\n\n### Customization\nAdd seniority Manager to reach store managers, or send the rows to a campaign instead of a sheet.",
+        "height": 670,
+        "width": 520,
+        "color": 1
+      },
+      "id": "fd1bed97-4a04-4678-b9b7-83cc6e167c88",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find nearby\nA free preview of owners and founders within the radius.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "de07ffd7-9344-42d0-b5d1-f14b4b4001e2",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reveal and save\nAt most max_reveal credits per search. Only checked emails reach the sheet.",
+        "height": 280,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "79c1651e-4187-412e-937d-f021c71746ac",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Find local businesses",
+        "formDescription": "Owners and founders near a place, with checked emails.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Business type",
+              "requiredField": true,
+              "placeholder": "e.g. dentist, dental practice"
+            },
+            {
+              "fieldLabel": "City or postal code",
+              "requiredField": true,
+              "placeholder": "e.g. Austin, Texas"
+            },
+            {
+              "fieldLabel": "Radius in miles",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "89256b7b-5113-48d9-8b79-9d1fe586e01f",
+      "name": "Local search form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "84d04713-d1c6-4c53-9f9d-3f422aa18f0d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f3d549f-f035-417e-94b4-638e31dc1d92",
+              "name": "max_preview",
+              "value": "25",
+              "type": "number"
+            },
+            {
+              "id": "33f594bd-911e-4af1-b4cb-d7db84f51c37",
+              "name": "max_reveal",
+              "value": "10",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "8f2d4fa2-cddd-4119-94aa-588866551188",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "keywords": "={{ $json['Business type'] }}",
+          "keywordScope": "company",
+          "nearPlace": "={{ $json['City or postal code'] }}",
+          "radius": "={{ $json['Radius in miles'] }}",
+          "radiusUnit": "mi",
+          "seniority": [
+            "Owner",
+            "Founder",
+            "Partner",
+            "C-Level"
+          ]
+        },
+        "limit": "={{ $json.max_preview }}",
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "7209e9c7-fdf6-44ea-a3b8-e641c3b5e431",
+      "name": "Preview owners nearby",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_reveal }}"
+      },
+      "id": "58c40b04-0883-44e6-8796-fd6afd799e58",
+      "name": "Cap the reveal",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "reveal",
+        "revealBy": "recordIds",
+        "recordIds": "={{ $json.record_id }}",
+        "simplify": true
+      },
+      "id": "d345b551-9ce6-4c89-8993-c4f1ac30e200",
+      "name": "Reveal with checked emails",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d570fd1d-e2fe-48de-a8b9-2861bb78044a",
+              "leftValue": "={{ $json.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "811d316a-c73f-4ccc-819f-666c537e3f72",
+      "name": "Has an email?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b07ac52a-c098-40b1-8220-28460dac5e43",
+              "name": "name",
+              "value": "={{ $json.full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "9b4e6636-b429-41f7-922d-baca74a3e908",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "5a5aa940-f05f-4c6b-aa8a-cdedc4452442",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "1ad1cf72-43be-4367-891c-19c81f6d5c51",
+              "name": "website",
+              "value": "={{ $json.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a11f08b5-2aa5-424d-bb9f-3800ab74bedd",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "58a10a27-3162-4023-b72d-29851828feb9",
+              "name": "city",
+              "value": "={{ $json.city }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "96d04f61-2673-4b47-a04e-82cad8a2aab3",
+      "name": "Sheet row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "ceb6c065-798a-4136-b94b-ad046949e35a",
+      "name": "Add to the sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Your sheet is updated",
+        "completionMessage": "={{ $('Reveal with checked emails').all().filter(i => i.json.email).length }} contacts with checked emails were added.",
+        "options": {}
+      },
+      "id": "9e474a7b-49f7-45a6-b3fd-da34eeb8414a",
+      "name": "Done page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        220
+      ],
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Local search form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Preview owners nearby",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview owners nearby": {
+      "main": [
+        [
+          {
+            "node": "Cap the reveal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap the reveal": {
+      "main": [
+        [
+          {
+            "node": "Reveal with checked emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reveal with checked emails": {
+      "main": [
+        [
+          {
+            "node": "Has an email?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Done page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email?": {
+      "main": [
+        [
+          {
+            "node": "Sheet row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet row": {
+      "main": [
+        [
+          {
+            "node": "Add to the sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

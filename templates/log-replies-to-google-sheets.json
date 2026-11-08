@@ -1,0 +1,190 @@
+{
+  "name": "Log every campaign reply in Google Sheets, updated when its status changes",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Log every campaign reply in Google Sheets, updated when its status changes\n\n### How it works\nA reply log your whole team and your clients can read. The Argorant Trigger sends new replies and replies labeled Interested, each with its conversation ID. The workflow writes one row per conversation with date, campaign, person, company, status, subject and snippet. Because rows are matched on conversation_id, an Interested label that arrives later updates the existing row, so the sheet shows the latest status of each conversation. Out of office replies are left out by Argorant.\n\nNo credits are used.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Activate the trigger with your Argorant credential. Argorant webhooks come with the Pro plan, and your n8n needs a public HTTPS address.\n4. Create a sheet with the columns conversation_id, date, campaign, email, name, company, status, subject, snippet and pick it in **Write the row**.\n\n### Customization\nAdd one tab per campaign by mapping the sheet name to the campaign.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "5e4f86f6-7f1e-4f84-a7ee-ac93715061d9",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## One row per conversation\nMatched on conversation_id, so a later label updates the same row.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "65a15a5f-868d-48f8-ab60-0e818209eb31",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "events": [
+          "reply.received",
+          "reply.positive"
+        ],
+        "options": {}
+      },
+      "id": "b9cb6449-84c6-40be-97c0-bfe3698e781f",
+      "name": "Reply",
+      "type": "n8n-nodes-argorant.argorantTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "98d53564-8037-41a1-b3b9-524f57675004"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e33f5f52-2a15-4bf4-b892-accfe9b0d2ca",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation_id || ($json.campaign_id + ':' + $json.lead_email) }}",
+              "type": "string"
+            },
+            {
+              "id": "f378b175-ccd2-40a1-afe0-f1840eb640e1",
+              "name": "date",
+              "value": "={{ $json.created_at }}",
+              "type": "string"
+            },
+            {
+              "id": "37638de1-35b0-4156-954a-fa469e4219d5",
+              "name": "campaign",
+              "value": "={{ $json.campaign_name || $json.campaign_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4a549dca-7f61-4314-b5af-7a7d6a48e532",
+              "name": "email",
+              "value": "={{ $json.lead_email }}",
+              "type": "string"
+            },
+            {
+              "id": "98a14510-a2fb-4e2a-ae12-6ba970e3fb7b",
+              "name": "name",
+              "value": "={{ $json.lead_name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5a5117db-63f0-4b82-814f-1f85ee281308",
+              "name": "company",
+              "value": "={{ $json.company || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b7e7e5e5-be77-4d2b-9694-7cbe2d406653",
+              "name": "status",
+              "value": "={{ $json.event === 'reply.positive' ? ($json.classification || 'positive') : 'new reply' }}",
+              "type": "string"
+            },
+            {
+              "id": "96285158-4950-4d20-8a63-ae28f5289605",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "ba81e6c2-504e-4dfb-b2b9-984606b87483",
+              "name": "snippet",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1280c3d-e2ce-486d-8942-9d6e60f7edb4",
+      "name": "Row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "conversation_id"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "e697a0bb-5265-4a31-b530-d537219c5d1d",
+      "name": "Write the row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Reply": {
+      "main": [
+        [
+          {
+            "node": "Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row": {
+      "main": [
+        [
+          {
+            "node": "Write the row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

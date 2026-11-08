@@ -1,0 +1,319 @@
+{
+  "name": "Get a prep brief for every new external meeting in Google Calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Get a prep brief for every new external meeting in Google Calendar\n\n### How it works\nWalk into every first call prepared. When a meeting is created in your calendar, the workflow keeps the attendees whose email is not on your own domain (at most max_attendees). For each one Argorant returns the person (title, seniority, place) and the company (industry, size, location, description). Your own AI model turns that into a five-line brief: who they are, what the company does, and two questions worth asking. The brief is emailed to you with the meeting title and time.\n\nCosts: 1 credit per attendee found; company data is free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set own_domain, brief_to and max_attendees in **Settings**.\n4. Add a Google Calendar credential to **New meeting** and pick the calendar; add a Gmail credential to **Email the brief**.\n5. Pick a chat model in **Chat model** (any chat model node works) and activate.\n\n### Customization\nPost the brief to your team chat, or run it only for meetings with a keyword in the title.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "a1f7d6a9-a7a6-49bf-b402-f43edaaa0afd",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Who is coming\nExternal attendees only, at most max_attendees per meeting.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "a8b8f756-39c1-4c21-81c0-5404c73a3ab0",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Research\nPerson: 1 credit when found. Company: free.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "77e8b262-feaa-40c3-ae5a-fa09f9b8a2e4",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Brief\nYour own model writes five lines; the email goes to you.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "1877dab8-8dd8-468b-a32e-ff03bd14f92a",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "triggerOn": "eventCreated",
+        "options": {}
+      },
+      "id": "8f828df3-4919-4742-b83d-108798354fb2",
+      "name": "New meeting",
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f939f2f5-a493-42d4-9296-fff391fff8f2",
+              "name": "own_domain",
+              "value": "yourcompany.example",
+              "type": "string"
+            },
+            {
+              "id": "b8f1bf48-34e4-4cd0-a861-78e5140d605c",
+              "name": "brief_to",
+              "value": "alex.rivera@yourcompany.example",
+              "type": "string"
+            },
+            {
+              "id": "481375b5-e85e-43c1-b958-0a4f5da0ade2",
+              "name": "max_attendees",
+              "value": "3",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "dcd6db94-402e-48ef-a944-ca2f62bd9665",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $('Settings').first().json;\nconst ev = $input.first().json;\nconst people = (ev.attendees || []).map(a => String(a.email || '').toLowerCase()).filter(e => e && !e.endsWith('@' + s.own_domain));\nreturn people.slice(0, s.max_attendees).map(email => ({ json: { email, domain: email.split('@')[1], meeting: ev.summary, start: ev.start?.dateTime || ev.start?.date } }));"
+      },
+      "id": "fbd09071-2330-4574-ba52-415bb1a79143",
+      "name": "External attendees",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.email }}",
+        "simplify": true
+      },
+      "id": "686b81ed-faa8-49a7-9ef4-7623f7b6be5a",
+      "name": "Look up the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "get",
+        "domain": "={{ $('External attendees').item.json.domain }}",
+        "previewLimit": 1,
+        "simplify": true
+      },
+      "id": "ae898e39-4610-48bd-b97c-7bd4c0fd4a76",
+      "name": "Look up the company",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a meeting prep brief of at most five short lines for this attendee. Line 1: who they are. Line 2: what their company does. Line 3: company size and location. Lines 4 and 5: two questions worth asking. Use only the facts below; say unknown when a fact is missing.\n\nAttendee: {{ JSON.stringify($('Look up the person').item.json) }}\nCompany: {{ JSON.stringify($json) }}"
+      },
+      "id": "22486337-8a8c-4727-86e6-ca21790963a7",
+      "name": "Write the brief",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "45ffb58c-91d0-44d6-adbf-35451bdfbef8",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Settings').first().json.brief_to }}",
+        "subject": "=Prep: {{ $('External attendees').item.json.meeting }} ({{ $('External attendees').item.json.email }})",
+        "emailType": "text",
+        "message": "={{ $json.text }}\n\nMeeting: {{ $('External attendees').item.json.meeting }} at {{ $('External attendees').item.json.start }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d9dad78b-8a6c-4de6-9bfe-14aac2a7e046",
+      "name": "Email the brief",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "New meeting": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "External attendees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "External attendees": {
+      "main": [
+        [
+          {
+            "node": "Look up the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up the person": {
+      "main": [
+        [
+          {
+            "node": "Look up the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up the company": {
+      "main": [
+        [
+          {
+            "node": "Write the brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the brief": {
+      "main": [
+        [
+          {
+            "node": "Email the brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write the brief",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

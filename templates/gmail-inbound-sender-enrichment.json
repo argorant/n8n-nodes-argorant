@@ -1,0 +1,408 @@
+{
+  "name": "Know who emails you: enrich new senders and flag decision makers in Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Know who emails you: enrich new senders and flag decision makers in Slack\n\n### How it works\nSpot the buyer in your inbox. The Gmail Trigger watches new mail that is not from your own domain and not a promotion. Each sender is handled once: Argorant looks up the person behind the address and returns name, title, seniority and company. Every match is logged in a sheet. Senders who are owners, founders, partners, C-level, VPs or directors are posted to Slack with the subject, so a decision maker never waits.\n\nCosts: 1 credit per sender found; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add a Gmail credential to **New email** and change -from:yourcompany.example in its search to your domain.\n4. Create a sheet with the columns date, email, name, title, company, seniority and pick it in **Log the sender**.\n5. Add a Slack credential and channel to **Flag a decision maker** and activate.\n\n### Customization\nAdd the sender to your CRM instead of a sheet, or skip free mail domains.",
+        "height": 609,
+        "width": 520,
+        "color": 1
+      },
+      "id": "b7a2ff4f-6c87-4d87-a33c-2572ea2290a3",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Who wrote\nOutside senders only, each one looked up once.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "dca91220-a47c-4309-9129-722878dc6a88",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Log and flag\nEvery match is logged; decision makers go to Slack.",
+        "height": 380,
+        "width": 940,
+        "color": 7
+      },
+      "id": "506376a8-e34c-4a82-a583-5fda443ea5c9",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "event": "messageReceived",
+        "simple": true,
+        "filters": {
+          "q": "-from:yourcompany.example -category:promotions -category:social"
+        },
+        "options": {}
+      },
+      "id": "251ccf39-0d76-4863-94b2-bf373806d2e9",
+      "name": "New email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc289353-1568-4695-a486-5c77f6c31e6e",
+              "name": "email",
+              "value": "={{ (String($json.From || '').match(/[\\w.+-]+@[\\w.-]+/)?.[0] || '').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "b04665b8-ea88-4b64-961a-f28b0c3c15ca",
+              "name": "subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "12a877ff-316c-4658-b434-d0369da9e24f",
+      "name": "Sender",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.email }}",
+        "options": {}
+      },
+      "id": "5bc3dca7-12de-47c3-ba72-42b37c929cb6",
+      "name": "New sender only",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "email",
+        "email": "={{ $json.email }}",
+        "simplify": true
+      },
+      "id": "96f29e6d-191d-488e-9a99-7fc3d0ce07db",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bdd85953-04d1-4585-878e-9280863549bd",
+              "leftValue": "={{ $json.found }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f46077f3-150c-4ed7-81de-9ab6b5a65e84",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d603bf8a-c9c0-4bc0-91ab-8808902afce7",
+              "name": "date",
+              "value": "={{ $now.toISODate() }}",
+              "type": "string"
+            },
+            {
+              "id": "cf0bed66-fc5f-4339-8e7a-29f7c75ddc16",
+              "name": "email",
+              "value": "={{ $('New sender only').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "8f7e346d-633a-4b97-aeec-403a38789cb5",
+              "name": "name",
+              "value": "={{ $json.full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "db98bfb5-6042-497c-9c67-988a13070699",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "501ddbd3-c617-4661-87b9-b18e2419fb3f",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "263ebd0d-c4e6-47bf-bcc0-808c96383883",
+              "name": "seniority",
+              "value": "={{ $json.seniority }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d70f6fb-e7a0-40a1-a6e2-64170a911ba3",
+      "name": "Log row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "536c8b1b-e0ea-4b22-81fb-be0e5d2b3075",
+      "name": "Log the sender",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e55508d4-9245-44fb-bbba-b5fb20103e8f",
+              "leftValue": "={{ 'C-Level,VP,Director,Owner,Founder,Partner'.split(',').includes($('Log row').item.json.seniority) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8bd86f4b-cc46-43fb-9d5d-c2de3e4466c0",
+      "name": "Decision maker?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=New email from {{ $('Log row').item.json.name }}, {{ $('Log row').item.json.title }} at {{ $('Log row').item.json.company }}: {{ $('New sender only').item.json.subject }}",
+        "otherOptions": {}
+      },
+      "id": "42fb3fb8-1363-467f-8529-1bbee566635a",
+      "name": "Flag a decision maker",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "New email": {
+      "main": [
+        [
+          {
+            "node": "Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender": {
+      "main": [
+        [
+          {
+            "node": "New sender only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New sender only": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [
+          {
+            "node": "Log row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log row": {
+      "main": [
+        [
+          {
+            "node": "Log the sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log the sender": {
+      "main": [
+        [
+          {
+            "node": "Decision maker?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision maker?": {
+      "main": [
+        [
+          {
+            "node": "Flag a decision maker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

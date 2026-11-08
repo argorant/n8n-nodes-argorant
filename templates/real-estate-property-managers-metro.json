@@ -1,0 +1,511 @@
+{
+  "name": "Real estate: property managers and brokers in a metro, ready as a campaign draft",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Real estate: property managers and brokers in a metro, ready as a campaign draft\n\n### How it works\nOpen a new metro in one minute. The form asks for a city or postal code and a radius in miles. Argorant counts property managers, leasing and brokerage leaders and owners at real estate companies based within that radius. If the count is within max_people, the search is saved as a list named after the metro, a campaign draft with two short emails that mention the city is created, and once the list has filled it is added to the draft; above it, nothing is saved or spent and the form says so. Review the draft, attach mailboxes and launch in Argorant.\n\nCosts: free until the list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set max_people in **Settings** and edit the emails in **Create the campaign draft**.\n4. Activate and open the production URL of **Metro form**.\n\n### Customization\nChange the titles for other buyers, such as facilities or maintenance managers.",
+        "height": 653,
+        "width": 520,
+        "color": 1
+      },
+      "id": "b2077d0d-41d5-4910-b288-12a881aba042",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size the metro\nFree count within the radius, checked against max_people.",
+        "height": 280,
+        "width": 940,
+        "color": 7
+      },
+      "id": "89e85c05-fc0f-4b78-8602-7c0c4f37bd39",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft and fill\nList and draft are free. Once the list has filled, it joins the draft (1 credit per new person).",
+        "height": 280,
+        "width": 1660,
+        "color": 7
+      },
+      "id": "4de7de92-48e3-4a31-82e9-3e839952ca6a",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Open a metro",
+        "formDescription": "City or postal code and how far around it.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "City or postal code",
+              "requiredField": true,
+              "placeholder": "Austin, Texas"
+            },
+            {
+              "fieldLabel": "Radius in miles",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "f1defa27-0b42-4635-9aa5-025c01bd0180",
+      "name": "Metro form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "af614585-0bf2-41dc-a0d8-ee4af5908f71"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e5d7ff07-cc93-4f3b-a7dc-f1e2b2bb672b",
+              "name": "max_people",
+              "value": "300",
+              "type": "number"
+            },
+            {
+              "id": "5ffb1024-049b-4816-aa0c-f000ce9a3bc5",
+              "name": "titles",
+              "value": "property manager, leasing manager, broker, managing broker, owner, principal",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "14b943ea-deb1-45df-aa4a-86c1b03055e1",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "industries": [
+            "Real Estate"
+          ],
+          "title": "={{ $('Settings').item.json.titles }}",
+          "nearPlace": "={{ $('Metro form').item.json['City or postal code'] }}",
+          "radius": "={{ $('Metro form').item.json['Radius in miles'] }}",
+          "radiusUnit": "mi"
+        }
+      },
+      "id": "987cd1ca-ca0f-446a-8026-9a30b9964697",
+      "name": "Count real estate leaders",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0b1556e1-20d4-43c8-96b3-8c65e3cb6850",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_people }}"
+            },
+            {
+              "id": "5f5db3e2-c600-4efa-a2b6-f4b5df46f858",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bbe1f8f8-57e9-48fe-8b55-8c1125eacb63",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Real estate {{ $('Metro form').item.json['City or postal code'] }}",
+        "peopleSource": "filters",
+        "filters": {
+          "industries": [
+            "Real Estate"
+          ],
+          "title": "={{ $('Settings').item.json.titles }}",
+          "nearPlace": "={{ $('Metro form').item.json['City or postal code'] }}",
+          "radius": "={{ $('Metro form').item.json['Radius in miles'] }}",
+          "radiusUnit": "mi"
+        },
+        "simplify": true
+      },
+      "id": "b3558e05-c749-4c70-a26a-9770c48d7518",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        240,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "create",
+        "name": "=Real estate {{ $('Metro form').item.json['City or postal code'] }}",
+        "steps": {
+          "step": [
+            {
+              "subject": "Properties in {{city|your area}}",
+              "body": "Hi {{first_name|there}},\n\nWe work with property teams in {{city|your area}} on the jobs that eat your week.\n\nOpen to a short call next week?\n\nAlex",
+              "delayDays": 0
+            },
+            {
+              "subject": "",
+              "body": "Hi {{first_name|there}}, happy to send a one-page overview instead.",
+              "delayDays": 4
+            }
+          ]
+        },
+        "senderMode": "none",
+        "settings": {
+          "tags": "real-estate"
+        },
+        "simplify": true
+      },
+      "id": "da8f8e22-aa4e-463e-9599-a6b17d0bfe22",
+      "name": "Create the campaign draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "b0b7d1c0-4b98-4508-aaf6-c515f05d80d1",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        340
+      ],
+      "webhookId": "10519bc1-094c-4a0e-b7c4-fe000ca38332"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "2763e732-a587-4e6a-b505-6621e5a58be9",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3d08d8f-a76d-4847-a059-9d4aefafa704",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "47e2d5d6-8a5c-4187-9218-19e43197780a",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2bf2259c-2df2-40c6-bafa-a234135444f6",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create the campaign draft').item.json.id }}"
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "3c650d8b-2f45-4bf2-acd4-c414dae40044",
+      "name": "Add the list to the draft",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Your campaign draft is ready",
+        "completionMessage": "={{ $('Count real estate leaders').item.json.count }} people near {{ $('Metro form').item.json['City or postal code'] }} are in the draft. Review it in Argorant, attach mailboxes and launch.",
+        "options": {}
+      },
+      "id": "44d01c50-6e18-441e-a0a7-95962e9c95a0",
+      "name": "Draft ready",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Nothing saved yet",
+        "completionMessage": "={{ $json.count }} people match, above your budget of {{ $('Settings').item.json.max_people }} (or none). Try a smaller radius.",
+        "options": {}
+      },
+      "id": "4b37d965-873c-44f9-ab20-7c6703642427",
+      "name": "Narrow the area",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add the list to the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metro form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Count real estate leaders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count real estate leaders": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Narrow the area",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Create the campaign draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the campaign draft": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the list to the draft": {
+      "main": [
+        [
+          {
+            "node": "Draft ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

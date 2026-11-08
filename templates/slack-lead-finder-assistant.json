@@ -1,0 +1,345 @@
+{
+  "name": "Mention a Slack bot to size and preview prospects in Argorant",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Mention a Slack bot to size and preview prospects in Argorant\n\n### How it works\nAsk for a market in the channel where the team talks about it. When someone mentions the Slack app, the message (without the mention) goes to an AI agent on your own chat model. The agent uses free Argorant tools: count, a short masked preview, save as list and credits left. The answer is posted as a reply in the same thread, and the thread is the agent's memory, so follow-up questions work. The agent cannot spend credits, send email or launch campaigns.\n\nArgorant actions here are free. Your model provider bills its own usage.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a Slack app with the app_mention event and chat:write, add the Slack credential to **Slack mention** and **Reply in the thread**, and invite the app to the channel.\n4. Pick a chat model in **Chat model** (any chat model node works).\n5. Activate and mention the app.\n\n### Customization\nRestrict the trigger to one channel, or add Company tools for account research.",
+        "height": 626,
+        "width": 520,
+        "color": 1
+      },
+      "id": "3b0b6801-5e7f-4be2-973f-e4b5ac6e6a63",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Your AI model\nAny chat model node works. Each Slack thread is one conversation.",
+        "height": 120,
+        "width": 380,
+        "color": 7
+      },
+      "id": "c6a052ee-00ba-40f9-aa2b-296f937ba098",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        40,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Argorant tools\nFree tools only: count, preview, save list, credits.",
+        "height": 120,
+        "width": 700,
+        "color": 7
+      },
+      "id": "5e72e69b-e06c-437b-8e2f-f830b421d1c3",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "trigger": [
+          "app_mention"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "id": "9e8021da-d412-4887-8444-03f7a0cc35f5",
+      "name": "Slack mention",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7de9b99f-2827-4a24-b6af-3affa2bff881"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text.replace(/<@[^>]+>/g, '').trim() }}",
+        "options": {
+          "systemMessage": "You help a sales team find prospects in Argorant. Turn the request into filters (job titles, industry in plain words, countries, states, cities, keywords). Call Count leads first, then Preview leads for a short sample. Save a list only when the user asks for it. Never invent people or numbers. Answer in at most six short lines. You cannot send emails or launch campaigns.",
+          "maxIterations": 10
+        }
+      },
+      "id": "0f480231-a6a4-4a17-ae13-94a80fa0a965",
+      "name": "Lead finder agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "3be6eb83-bb69-4049-88db-245d98147b27",
+      "name": "Chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'slack-' + ($('Slack mention').item.json.thread_ts || $('Slack mention').item.json.ts) }}",
+        "contextWindowLength": 10
+      },
+      "id": "e6345c22-6991-498e-92ec-1680cb8f10f7",
+      "name": "Chat memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Count the people who match the filters. Free.",
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas', 'string', '') }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words', 'string', '') }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
+          "state": "={{ $fromAI('states', 'States or provinces such as Texas, separated by commas', 'string', '') }}",
+          "city": "={{ $fromAI('cities', 'Cities separated by commas, never states', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the companies do', 'string', '') }}"
+        }
+      },
+      "id": "33d8f7d2-6528-4602-850f-3353a3bdbf8f",
+      "name": "Count leads",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        540,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Preview up to 5 matching people with names masked. Free.",
+        "resource": "lead",
+        "operation": "search",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas', 'string', '') }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words', 'string', '') }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
+          "state": "={{ $fromAI('states', 'States or provinces such as Texas, separated by commas', 'string', '') }}",
+          "city": "={{ $fromAI('cities', 'Cities separated by commas, never states', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the companies do', 'string', '') }}"
+        },
+        "limit": 5,
+        "simplify": true,
+        "searchOptions": {}
+      },
+      "id": "5cd6689e-7deb-4ccc-9225-c96671e2914a",
+      "name": "Preview leads",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        700,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Save everyone who matches as a list in Argorant. Free.",
+        "resource": "list",
+        "operation": "create",
+        "name": "={{ $fromAI('list_name', 'A short name for the list', 'string') }}",
+        "peopleSource": "filters",
+        "filters": {
+          "title": "={{ $fromAI('job_titles', 'Job titles separated by commas', 'string', '') }}",
+          "industry": "={{ $fromAI('industry_words', 'One industry in plain words', 'string', '') }}",
+          "country": "={{ String($fromAI('countries', 'Countries or regions such as United States or DACH, separated by commas', 'string', '')).split(',').map(c => c.trim()).filter(c => c) }}",
+          "state": "={{ $fromAI('states', 'States or provinces such as Texas, separated by commas', 'string', '') }}",
+          "city": "={{ $fromAI('cities', 'Cities separated by commas, never states', 'string', '') }}",
+          "keywords": "={{ $fromAI('keywords', 'Words that describe what the companies do', 'string', '') }}"
+        },
+        "simplify": true
+      },
+      "id": "1b123ef8-ab13-4435-a922-5ad71f47d6ef",
+      "name": "Save as list",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        860,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get the credits and limits of the account. Free.",
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "c38fa2a7-5725-448a-903c-0e5b14080315",
+      "name": "Credits left",
+      "type": "n8n-nodes-argorant.argorantTool",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack mention').item.json.channel }}"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ $('Slack mention').item.json.thread_ts || $('Slack mention').item.json.ts }}"
+            }
+          },
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "8b05f044-7fbe-483f-9bb6-97525a3f3cc9",
+      "name": "Reply in the thread",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        700,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Count leads": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preview leads": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as list": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Credits left": {
+      "ai_tool": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack mention": {
+      "main": [
+        [
+          {
+            "node": "Lead finder agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead finder agent": {
+      "main": [
+        [
+          {
+            "node": "Reply in the thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

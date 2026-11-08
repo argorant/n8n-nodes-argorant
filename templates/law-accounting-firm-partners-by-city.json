@@ -1,0 +1,499 @@
+{
+  "name": "Law and accounting firm partners in a city, saved and added to a campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Law and accounting firm partners in a city, saved and added to a campaign\n\n### How it works\nProfessional services firms buy through their partners. The form asks for a city and whether you want law firms, accounting firms or both. Argorant counts partners, owners and managing directors at legal services and accounting companies in that city (free). If the count is within max_people, they are saved as a list named after the city, which joins your campaign once it has filled; otherwise nothing is saved or spent and the form says so. Firms already in the campaign are not added twice.\n\nCosts: free until the list is added, then 1 credit per new person.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Set max_people in **Settings** and pick the campaign in **Add the list**.\n4. Activate and open the production URL of **City form**.\n\n### Customization\nAdd tax advisors or consultancies by changing the industries in **Industries for the choice**.",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "0e354207-8f61-4f79-b844-b62c84348555",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Size the city\nFree count of partners at the chosen firms, checked against max_people.",
+        "height": 280,
+        "width": 1180,
+        "color": 7
+      },
+      "id": "f499b823-e9ed-4b20-bd60-c2a72939b541",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Fill the campaign\nOnce the list has filled, it joins the campaign (1 credit per new person).",
+        "height": 280,
+        "width": 1420,
+        "color": 7
+      },
+      "id": "162b3d25-7a21-4483-bd7b-4849f8060d52",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Partners in a city",
+        "formDescription": "Which city and which kind of firm.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "City",
+              "requiredField": true,
+              "placeholder": "Austin"
+            },
+            {
+              "fieldLabel": "Firms",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Law firms"
+                  },
+                  {
+                    "option": "Accounting firms"
+                  },
+                  {
+                    "option": "Both"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a19551d8-958c-4841-8b82-3af885ab6c20",
+      "name": "City form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "36dd5ef3-b893-4ae8-9332-7e21665230fd"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe664110-bef1-4d1e-9001-4f10e0208943",
+              "name": "max_people",
+              "value": "400",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "416d4d07-6327-43d6-938a-b5a361f3af32",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pick = $input.first().json.Firms;\nconst map = { 'Law firms': ['Legal Services'], 'Accounting firms': ['Accounting'], 'Both': ['Legal Services', 'Accounting'] };\nreturn [{ json: { ...$input.first().json, industries: map[pick] || map.Both } }];"
+      },
+      "id": "63544836-98ae-45b7-afad-be7ac38e4915",
+      "name": "Industries for the choice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "count",
+        "filterSource": "fields",
+        "filters": {
+          "industries": "={{ $json.industries }}",
+          "seniority": [
+            "Partner",
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "city": "={{ $json.City }}"
+        }
+      },
+      "id": "f05f7d68-debe-408a-8a0d-de0f19fae0cf",
+      "name": "Count partners",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "26518de5-fe60-42e5-a88b-a33ef554dcca",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": "={{ $('Settings').item.json.max_people }}"
+            },
+            {
+              "id": "9b29085a-7f35-4c30-a16c-5fda8d4bb9dd",
+              "leftValue": "={{ $json.count }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a5842569-0b9c-4e14-9a27-3aed6738578c",
+      "name": "Within budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "create",
+        "name": "=Partners {{ $('Industries for the choice').item.json.City }} ({{ $('Industries for the choice').item.json.Firms }})",
+        "peopleSource": "filters",
+        "filters": {
+          "industries": "={{ $('Industries for the choice').item.json.industries }}",
+          "seniority": [
+            "Partner",
+            "Owner",
+            "Founder",
+            "C-Level"
+          ],
+          "city": "={{ $('Industries for the choice').item.json.City }}"
+        },
+        "simplify": true
+      },
+      "id": "236deb05-96f0-44f2-b2fc-091811d5d360",
+      "name": "Save as a list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "id": "3b657d2e-f6f0-4ed3-8ac7-d8555be925fd",
+      "name": "Wait a minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        340
+      ],
+      "webhookId": "5ef7219d-1ece-48ab-9e11-ffcd6c89a4de"
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "listId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "includeFill": true,
+        "simplify": true
+      },
+      "id": "9164f4d1-8756-4918-bd3f-e88f5bc8b6cc",
+      "name": "List progress",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "da5109a8-a02a-40dc-b930-548714a6f9d9",
+              "leftValue": "={{ $json.filling }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "6ead2bba-42e6-4a65-9867-9524493d97ea",
+              "leftValue": "={{ $runIndex }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "rightValue": 30
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d56a5257-0023-48f4-a462-d7fdd7888eb0",
+      "name": "Still filling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "campaign",
+        "operation": "addLeads",
+        "campaignId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "leadSource": "list",
+        "leadListId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Save as a list').item.json.list_id }}"
+        },
+        "addLeadsOptions": {}
+      },
+      "id": "aca79896-f562-464f-a846-18df3d5adf3c",
+      "name": "Add the list",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Partners added",
+        "completionMessage": "={{ $('Count partners').item.json.count }} partners in {{ $('Industries for the choice').item.json.City }} are in your campaign draft.",
+        "options": {}
+      },
+      "id": "d6f3abcf-6fe9-4217-9915-8f8e075a1b77",
+      "name": "Added",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Nothing saved yet",
+        "completionMessage": "={{ $json.count }} partners match, above your budget of {{ $('Settings').item.json.max_people }} (or none).",
+        "options": {}
+      },
+      "id": "337ea1c5-85e5-45f6-a4d2-535161a058ad",
+      "name": "Too many or none",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Wait a minute": {
+      "main": [
+        [
+          {
+            "node": "List progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List progress": {
+      "main": [
+        [
+          {
+            "node": "Still filling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still filling?": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add the list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "City form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Industries for the choice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Industries for the choice": {
+      "main": [
+        [
+          {
+            "node": "Count partners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count partners": {
+      "main": [
+        [
+          {
+            "node": "Within budget?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within budget?": {
+      "main": [
+        [
+          {
+            "node": "Save as a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Too many or none",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as a list": {
+      "main": [
+        [
+          {
+            "node": "Wait a minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add the list": {
+      "main": [
+        [
+          {
+            "node": "Added",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

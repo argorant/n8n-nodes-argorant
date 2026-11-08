@@ -1,0 +1,311 @@
+{
+  "name": "Enrich spreadsheet rows with work email, job title and profile URL",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich spreadsheet rows with work email, job title and profile URL\n\n### How it works\nFill the gaps in a list you already own. The sheet holds full_name and domain per row; email, title, seniority, profile and status start empty. Each run reads the rows without a status, takes at most max_rows of them and asks Argorant to find each person at their company. A match with a passing email writes the email, title, seniority and profile URL back to the row; a miss writes not found, so the row is not tried again.\n\nCosts: 1 credit per person found with a passing email; misses are free.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Create a sheet with the columns full_name, domain, email, title, seniority, profile, status and pick it in both Google Sheets nodes.\n4. Set max_rows in **Settings** and click Execute workflow.\n\n### Customization\nAdd a schedule trigger to enrich new rows every hour.",
+        "height": 558,
+        "width": 520,
+        "color": 1
+      },
+      "id": "60f4e35a-7f6e-47e2-9de8-3b1cc27eaef2",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pick rows\nRows without a status, at most max_rows per run.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "14ac13cf-9e7c-402a-bec1-90d6bd61dcca",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Enrich and write back\n1 credit per match with a passing email. Every row gets a status.",
+        "height": 280,
+        "width": 700,
+        "color": 7
+      },
+      "id": "50b4775b-4101-406f-96b0-9b3123e06f6d",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bfe20324-437f-4a05-a92f-32c481d8c017",
+      "name": "Enrich the sheet",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da4e8df7-2c47-4d24-bc96-ba69e4779d2c",
+              "name": "max_rows",
+              "value": "100",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a18cde9f-3be2-4508-88eb-34beb62a2845",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "904348ba-76c1-4340-94cf-fd169c74f1c4",
+      "name": "Rows to enrich",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Settings').first().json.max_rows }}"
+      },
+      "id": "375fe1f9-9dcf-4cdc-a890-a6faef28cab3",
+      "name": "Cap per run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "enrich",
+        "enrichBy": "name",
+        "name": "={{ $json.full_name }}",
+        "domain": "={{ $json.domain }}",
+        "simplify": true
+      },
+      "id": "fba6b4cb-41c0-40d9-b7bc-77c10fd1ba8e",
+      "name": "Find the person",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "334d2289-fe30-49cf-a5ce-bf83026ea3d7",
+              "name": "row_number",
+              "value": "={{ $('Cap per run').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "a2fd5fdb-6ae2-4aec-97ec-abfa4e19e455",
+              "name": "email",
+              "value": "={{ $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a46ce7-766a-43f0-986f-8b2b55c64f5d",
+              "name": "title",
+              "value": "={{ $json.title || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "07109713-f92b-449a-b842-9440ead64ad2",
+              "name": "seniority",
+              "value": "={{ $json.seniority || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e951ea8a-534a-4672-add5-f5238c91bb1a",
+              "name": "profile",
+              "value": "={{ $json.linkedin_url || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "834c3c3b-7c52-4d1d-82b1-6c31e8ca6b54",
+              "name": "status",
+              "value": "={{ $json.found ? 'enriched' : 'not found' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "daf00b2e-b2e7-4fc1-8706-2a34f41c042e",
+      "name": "Row result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "1eb2621d-2d3a-498e-8612-e0ea337b7f43",
+      "name": "Write back",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Enrich the sheet": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Rows to enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows to enrich": {
+      "main": [
+        [
+          {
+            "node": "Cap per run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cap per run": {
+      "main": [
+        [
+          {
+            "node": "Find the person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the person": {
+      "main": [
+        [
+          {
+            "node": "Row result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Row result": {
+      "main": [
+        [
+          {
+            "node": "Write back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

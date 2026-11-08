@@ -1,0 +1,347 @@
+{
+  "name": "Agency: turn a client's ICP form into a checked CSV in their Drive folder",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Agency: turn a client's ICP form into a checked CSV in their Drive folder\n\n### How it works\nDeliver lists without manual work. Your client fills the form: company name, job titles, industry in plain words, country and the number of rows. Argorant exports the matching people as a CSV; every email is checked while the file is built, and people you exported before are left out so you never pay twice. The workflow waits for the file, uploads the CSV to your Drive folder and emails your team the file name and row count.\n\nCosts: 1 credit per contact in the file, capped by max_rows in Settings.\n\n### Setup\n1. Install the community node **n8n-nodes-argorant** (tested with 0.3.0 on n8n 2.46.6): Settings > Community nodes > Install. Guide: https://github.com/argorant/n8n-nodes-argorant\n2. Add an **Argorant API** credential with a key from Argorant (Settings, API keys).\n3. Add Google Drive and Gmail credentials, pick the folder in **Save to the client folder**.\n4. Set max_rows and team_email in **Settings**.\n5. Activate and share the production URL of **Client ICP form**.\n\n### Customization\nCreate one folder per client with a Drive node, or add phone numbers (10 credits each, Pro plan).",
+        "height": 592,
+        "width": 520,
+        "color": 1
+      },
+      "id": "d073719c-f9a0-46be-92c0-86dbc4ece0ed",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Build\nExport from the client's answers, capped by max_rows.",
+        "height": 280,
+        "width": 460,
+        "color": 7
+      },
+      "id": "739622f7-9052-4d94-a149-d483578324fb",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Deliver\nCSV to the client folder and a note to your team.",
+        "height": 500,
+        "width": 940,
+        "color": 7
+      },
+      "id": "aff05d71-1183-4c16-b383-801735ad7836",
+      "name": "Sticky Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Your target list",
+        "formDescription": "Tell us who you want to reach. We send the checked file to your folder.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Client",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Job titles",
+              "requiredField": true,
+              "placeholder": "Head of Operations, COO"
+            },
+            {
+              "fieldLabel": "Industry",
+              "requiredField": true,
+              "placeholder": "logistics"
+            },
+            {
+              "fieldLabel": "Country",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Rows",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e45ad7a2-d0df-4208-8fdd-3e7a9b1ef283",
+      "name": "Client ICP form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "75957a1f-8285-4238-951e-01c4f6aedfb5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3117067b-2c09-4ce2-9752-d4e0450715b2",
+              "name": "max_rows",
+              "value": "500",
+              "type": "number"
+            },
+            {
+              "id": "a39da673-c968-49e3-9ead-106de0a81266",
+              "name": "team_email",
+              "value": "alex.rivera@yourcompany.example",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "id": "f41499cc-b30d-4f88-b7ef-79a974d50748",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "export",
+        "operation": "create",
+        "filterSource": "fields",
+        "filters": {
+          "title": "={{ $json['Job titles'] }}",
+          "industry": "={{ $json.Industry }}",
+          "country": "={{ [$json.Country] }}"
+        },
+        "exportLimit": "={{ Math.min(Number($json.Rows) || 1, $json.max_rows) }}",
+        "exportOptions": {
+          "waitMinutes": 20,
+          "excludePreviouslyExported": true
+        }
+      },
+      "id": "377b35d5-84f0-4200-8fda-cc2bf70d87a7",
+      "name": "Export the checked CSV",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "92af66b5-97fc-46cf-92b0-5191e7b60df7",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "done"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "43f8ac0f-af7a-4582-a733-4ded9ab7daad",
+      "name": "File ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "export",
+        "operation": "download",
+        "exportId": "={{ $json.job_id }}",
+        "grades": "valid",
+        "binaryPropertyName": "data"
+      },
+      "id": "5794135b-bfce-4a52-98a9-38c47343c6da",
+      "name": "Download the CSV",
+      "type": "n8n-nodes-argorant.argorant",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "=ICP {{ $('Settings').item.json.Client }} {{ $now.toISODate() }}.csv",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "id": "6a4c214b-25c8-45f4-b2c7-451b83bd6896",
+      "name": "Save to the client folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Settings').item.json.team_email }}",
+        "subject": "=List for {{ $('Settings').item.json.Client }} is in Drive",
+        "emailType": "text",
+        "message": "={{ $('Download the CSV').item.json.rows }} checked contacts for {{ $('Settings').item.json.Client }} are in the client folder.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "6bb958ba-0b9d-4503-a550-35b123606921",
+      "name": "Email the team",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Settings').item.json.team_email }}",
+        "subject": "=List for {{ $('Settings').item.json.Client }} is still building",
+        "emailType": "text",
+        "message": "=Export {{ $json.job_id }} was not done after 20 minutes (status {{ $json.status }}). Download it in Argorant when it is ready.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b6797f4c-03e3-43fb-93ef-dd987fc89c55",
+      "name": "Email: still building",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Client ICP form": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Export the checked CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export the checked CSV": {
+      "main": [
+        [
+          {
+            "node": "File ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File ready?": {
+      "main": [
+        [
+          {
+            "node": "Download the CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: still building",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the CSV": {
+      "main": [
+        [
+          {
+            "node": "Save to the client folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to the client folder": {
+      "main": [
+        [
+          {
+            "node": "Email the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
