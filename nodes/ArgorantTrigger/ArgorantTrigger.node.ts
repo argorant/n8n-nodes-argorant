@@ -138,19 +138,12 @@ export class ArgorantTrigger implements INodeType {
 		],
 		properties: [
 			{
-				displayName:
-					'Argorant calls this workflow over the internet, so your n8n needs a public HTTPS address. Each call is signed and checked here.',
-				name: 'httpsNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
 				displayName: 'Events',
 				name: 'events',
 				type: 'multiOptions',
 				required: true,
 				default: ['reply.positive'],
-				description: 'The events that start the workflow',
+				description: 'The events that start the workflow. Argorant sends them to a public HTTPS address of your n8n.',
 				options: TRIGGER_EVENTS,
 			},
 			{

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 (2026-11-12)
+
+- The note about the public HTTPS address is no longer on the Argorant Trigger form. It is now in the README and in the description of the Events field.
+
 ## 0.3.0 (2026-11-08)
 
 The whole outbound workflow, not only data.

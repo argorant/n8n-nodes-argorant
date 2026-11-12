@@ -120,7 +120,9 @@ No operation runs an Argorant AI model. Write campaign copy and personal lines w
 
 ## Argorant Trigger
 
-Starts a workflow when Argorant calls it. When you activate the workflow, the node registers a webhook in your Argorant account; when you deactivate it, the webhook is removed. Every call is signed (`X-Argorant-Signature`, HMAC-SHA256 of the body) and the node refuses calls with a wrong signature.
+Starts a workflow when Argorant calls it. Argorant calls your n8n over the internet and only on public HTTPS addresses, so your n8n needs a public `https://` URL (the `WEBHOOK_URL` setting when self-hosted).
+
+When you activate the workflow, the node registers a webhook in your Argorant account; when you deactivate it, the webhook is removed. Every call is signed (`X-Argorant-Signature`, HMAC-SHA256 of the body). The node checks the signature of each call and refuses calls with a wrong one.
 
 | Event | When |
 |---|---|
@@ -135,7 +137,7 @@ Starts a workflow when Argorant calls it. When you activate the workflow, the no
 | Email Checked | A single email check finished |
 | New Matches for a Saved Search | A saved search now finds more people than before |
 
-Options: only events of chosen campaigns, and ignoring test events. Argorant calls public HTTPS addresses only, so your n8n needs a public `https://` URL (the `WEBHOOK_URL` setting when self-hosted). An account holds up to 10 webhooks.
+Options: only events of chosen campaigns, and ignoring test events. An account holds up to 10 webhooks.
 
 ## AI agents
 
@@ -178,6 +180,7 @@ Built with the n8n community node CLI (`@n8n/node-cli` 0.55.5) and tested with n
 
 ## Version history
 
+* **0.3.1**: the note about the public HTTPS address moved from the trigger form to this README and the Events field.
 * **0.3.0**: the whole outbound workflow: 54 operations across 10 resources, the Argorant Trigger with signed webhooks, safe launches with Confirm Launch, batching, retries, clear errors and workflow templates. See [CHANGELOG](CHANGELOG.md).
 * **0.2.0**: rebuilt node with Lead, List, Email, Campaign and Reply operations (never published to npm).
 * **0.1.1**: first preview.
